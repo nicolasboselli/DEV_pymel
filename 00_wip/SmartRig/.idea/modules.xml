@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="ProjectModuleManager">
+    <modules>
+      <module fileurl="file://$PROJECT_DIR$/.idea/SmartRig.iml" filepath="$PROJECT_DIR$/.idea/SmartRig.iml" />
+      <module fileurl="file://C:/YCDIVFX_MaxPlus-master/.idea/YCDIVFX_MaxPlus-master.iml" filepath="C:/YCDIVFX_MaxPlus-master/.idea/YCDIVFX_MaxPlus-master.iml" />
+      <module fileurl="file://$USER_HOME$/PycharmProjects/testMax/.idea/testMax.iml" filepath="$USER_HOME$/PycharmProjects/testMax/.idea/testMax.iml" />
+    </modules>
+  </component>
+</project>
+
