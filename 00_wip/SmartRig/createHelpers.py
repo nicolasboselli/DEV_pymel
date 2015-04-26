@@ -9,21 +9,27 @@ import pymel.core as pm
 import maya.mel as mm
 import maya.OpenMaya as om
 
-def createCircle(axis, sel = None):
+"""
+maj:
+    parent circle as option
+    find joints children in hierarchy as option
+    set circle size
+"""
+def createCircle(axis, sel = None, findHierarchy = False, parentHierachy = False, radius = 2):
     if not sel:
         sel = pm.ls(sl = True)
     
     circles = []
     
     for s in sel:
-        oneCircle = pm.circle(n = (s.name() + "_ctrl"), ch = False, o = True, nr = axis, r = 2)[0]
-        oneGroup = pm.group(em = True, name = ( oneCircle.name() + "_grp" ))
+        oneCircle = pm.circle(n = (s.nodeName() + "_ctrl"), ch = False, o = True, nr = axis, r = radius)[0]
+        oneGroup = pm.group(em = True, name = ( oneCircle.nodeName() + "_grp" ))
         
         oneCircle.setParent(oneGroup)
         pm.parent(oneGroup, s, r = True)
         pm.parent(oneGroup, w = True)
         
-        om.MGlobal_displayInfo('circle created: \t%s' % oneCircle.name())
+        om.MGlobal_displayInfo('circle created: \t%s' % oneCircle.nodeName())
         circles.append(oneCircle)
         
     om.MGlobal_displayInfo('circle creation done')

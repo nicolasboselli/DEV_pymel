@@ -4,7 +4,7 @@ Created on 23 nov. 2014
 @author: nicolas_2
 '''
 
-### recommandation: le script est pense pour des joints qui pointe vers le joint suivant, qui rotate sur y 
+### recommandation: le script est pense pour des joints qui pointe vers le joint suivant en x, qui rotate sur y 
 
 # selection
 
@@ -17,8 +17,7 @@ from pprint import pprint
 import pymel.core as pm
 import SmartRig.createHelpers as helpers
 import IKFK.AddAttr as ikAttr
-
-sel = pm.ls(sl = True)
+import IKFK.SmartRigDef as SRD
 
 # TODO: reorganize motion system with ik and fk
 # TODO: add controller on pole Vector
@@ -26,11 +25,19 @@ sel = pm.ls(sl = True)
 # TODO: change controllers scale
 # TODO: add resize
 # TODO: hide ik and fk joint
-
+# maj: constraint joint hand wriste to ik
+# debug: apply stretch on scale and not on x position to easily reinit joint scale after motion system deletion
 ########################################################################## BASE CREATION
 # get joint radius
+sel = pm.ls(sl = True)
 rad = sel[0].radius.get()
 
+# create hierarchy
+motionGrp = SRD.initMotionSystem ()
+defGrp = SRD.initDeformSystem ()
+
+def createIKFK (sel):
+    pass
 # duplicate selection FK 
 fkChain = pm.duplicate(sel, renameChildren = True)
 for jnt in fkChain:
@@ -46,31 +53,22 @@ for jnt in ikChain:
 # ikChain[0].setAttr('translateX', 2)
 
 
-jtRoot = helpers.rootGroup([sel[0]])[0]
+# jtRoot = helpers.rootGroup([sel[0]])[0]
 fkRoot = helpers.rootGroup([fkChain[0]])[0]
 ikRoot = helpers.rootGroup(sel = [ikChain[0]])[0]
 
-
+# IKFK grp creation
 tmpGrp = pm.group(em = True)
 pm.rename(tmpGrp, '%s_IKFK_grp' % sel[0])
+tmpGrp.setParent(motionGrp)
 
-motionGrp = pm.group(em = True, name = 'motion_system')
-defGrp = pm.group(em = True, name = 'deformation_system')
-
-motionGrp.setParent(tmpGrp)
-defGrp.setParent(tmpGrp)
-
-jtRoot.setParent(defGrp)
-ikRoot.setParent(motionGrp)
-fkRoot.setParent(motionGrp)
-
-motionGrp.setParent(tmpGrp)
-defGrp.setParent(tmpGrp)
-
+ikRoot.setParent(tmpGrp)
+fkRoot.setParent(tmpGrp)
 
 #############################################################################################switch IKFK
 
 # TODO: ajouter scale constraint on deform joints
+
 # create ctrl with switch ikfk
 switchIKFK = pm.circle(ch = False, o = True, nr = [0,1,0], r = 1, name = 'switchIKFK' )
 pm.addAttr(switchIKFK, ln =  "fk" , at  = 'double', min = 0, max = 1)
@@ -105,7 +103,7 @@ for i, jnt in enumerate(sel):
             pm.connectAttr('%s.fk' % switchIKFK[0].name(), '%s.%s' % (constrain,attr))
 
 switchGrp = helpers.rootGroup(switchIKFK)[0]
-switchGrp.setParent(motionGrp)
+switchGrp.setParent(tmpGrp)
 
 #     pm.connectAttr('%s.fk' % switchIKFK[0].name(), constrain)
 
@@ -126,7 +124,7 @@ for i, null in enumerate(fkCtrls):
     pm.scaleConstraint(fkCtrls[i], fkChain[i])
     
 tmpChild = fkCtrls[0].getParent()
-tmpChild.setParent(motionGrp)
+tmpChild.setParent(tmpGrp)
 
 
 # IK
@@ -161,9 +159,9 @@ poleVectorLoc.rotate.set([0,0,0])
 ikCtrl = helpers.createCircle([1,0,0], [ikHandle])[0]
 pm.pointConstraint(ikCtrl, ikHandle)
 
-ikHandle.setParent(motionGrp)
-(ikCtrl.getParent()).setParent(motionGrp)
-poleVectorLoc.setParent(motionGrp)
+ikHandle.setParent(tmpGrp)
+(ikCtrl.getParent()).setParent(tmpGrp)
+poleVectorLoc.setParent(tmpGrp)
 
 ############################################################################################### pole vector multiple parent
 
@@ -180,10 +178,9 @@ tmpChild = distShape.getParent()
 distGrp = pm.group(em = True)
 distGrp.rename('%s_grp' % distShape.name())
 tmpChild.setParent(distGrp)
-for l in locs:
-    l.setParent(distGrp)
+for l in locs: l.setParent(distGrp)
 
-distGrp.setParent(motionGrp)
+distGrp.setParent(tmpGrp)
 #     calculate maximum leg size
 #         plusMinusAverage
 fixedSize_sumNode = pm.createNode('plusMinusAverage')

@@ -45,6 +45,14 @@ def createCube():
     return oneCube
 
 # def to replace old shape with new shape
+def createNurbsSphere(rad = 2, oneName = "Sphere_Ctrl"):
+    circ1 = pm.circle(ch = False, o = True, nr = [1,0,0], r = rad, name = oneName)[0]
+    circ2 = pm.circle(ch = False, o = True, nr = [0,1,0], r = rad, name = oneName)[0]
+    circ3 = pm.circle(ch = False, o = True, nr = [0,0,1], r = rad, name = oneName)[0]
+    pm.parent(circ3.getShape(), circ2.getShape(), circ1, s = True, r = True)
+    pm.delete(circ3, circ2)
+    return circ1
+
 
 
 # pm.select(test)
