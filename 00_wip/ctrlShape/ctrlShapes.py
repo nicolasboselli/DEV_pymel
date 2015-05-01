@@ -14,38 +14,8 @@ import os
 from glob import glob
 
 
-
-
-
-# generate shape dictionnary (name: path)
-
-# def to load procedure
-def importCtrl(f):
-    '''
-    param: f: mel pathfile
-    '''
-    sourceHandle  = open(f,'r')
-    sourceContent = sourceHandle.read()
-    sourceHandle.close()
-    mm.eval(sourceContent)
-    print("import of %s done." % f)
-
-
-# parse folder, collect mel file and load mel proc
-def initShapes():
-    search = r'J:\_svn\DEV_pymel\00_wip\ctrls\*.mel'
-    shapePath = glob(search)
-    for pth in shapePath:
-        importCtrl(pth)
-
-# def for create shape from dictionnary with shape name
-def createCube():
-    oneCube = mm.eval('createCube()')
-    pm.select(cl = True)
-    return oneCube
-
 # def to replace old shape with new shape
-def createNurbsSphere(rad = 2, oneName = "Sphere_Ctrl"):
+def createNurbsSphere(rad = 2, oneName = "sphere_ctrl"):
     circ1 = pm.circle(ch = False, o = True, nr = [1,0,0], r = rad, name = oneName)[0]
     circ2 = pm.circle(ch = False, o = True, nr = [0,1,0], r = rad, name = oneName)[0]
     circ3 = pm.circle(ch = False, o = True, nr = [0,0,1], r = rad, name = oneName)[0]
@@ -53,6 +23,28 @@ def createNurbsSphere(rad = 2, oneName = "Sphere_Ctrl"):
     pm.delete(circ3, circ2)
     return circ1
 
+def createCross(d = 1, name = "cross_ctrl" ):
+    curve = pm.curve( degree = 1, \
+    periodic = True, \
+    point =[(-2*d, 0, -d), (-d, 0, -d), (-d, 0, -2*d), (d, 0, -2*d), (d,0,-d), (2*d,0,-d), (2*d,0,d), (d,0,d), (d,0,2*d), (-d,0,2*d), (-d,0,d), (-2*d,0,d), (-2*d, 0, -d)], \
+    knot = [-2,-1,0,1,2,3,4,5,6,7,8,9,10], \
+    name = name)
+    return curve
+
+def createOneCube(d = 1, name = "cube_ctrl"):
+    curv1 = pm.curve(degree = 1, periodic = True, point = [(-d,d,-d), (-d,d,d), (d,d,d), (d,d,-d),(-d,d,-d) ], knot = [0,1,2,3,4])
+    curv2 = pm.curve(degree = 1, periodic = True, point = [(-d,-d,-d), (-d,-d,d), (d,-d,d), (d,-d,-d),(-d,-d,-d) ], knot = [0,1,2,3,4])
+    curv3 = pm.curve(degree = 1, periodic = True, point = [(-d,d,-d), (-d,-d,-d), (-d,d,-d)], knot = [0,1,2])
+    curv4 = pm.curve(degree = 1, periodic = True, point = [(d,d,-d), (d,-d,-d), (d,d,-d)], knot = [0,1,2])
+    curv5 = pm.curve(degree = 1, periodic = True, point = [(-d,d,d), (-d,-d,d), (-d,d,d)], knot = [0,1,2])
+    curv6 = pm.curve(degree = 1, periodic = True, point = [(d,d,d), (d,-d,d), (d,d,d)], knot = [0,1,2])
+    
+    curveFinal = pm.group(empty = True, name = name)
+    
+    pm.parent(curv1.getShape(), curv2.getShape(), curv3.getShape(), curv4.getShape(), curv5.getShape(), curv6.getShape() , curveFinal , shape = True, relative = True)
+    
+    pm.delete(curv1, curv2, curv3, curv4, curv5, curv6)
+    return curveFinal
 
 
-# pm.select(test)
+

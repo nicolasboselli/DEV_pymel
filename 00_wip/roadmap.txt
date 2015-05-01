@@ -1,0 +1,18 @@
+-- Loup relative
+
+-- eyes template
+	-- with or without copy to origin for blendshape
+-- reverse foot template for ik
+
+-- additive cup, roll, spread for hand
+-- how to connect different parts?
+
+-- create helpers: choose shape as parameter
+	--create cube and cross 
+	
+-- def to tag joint
+-- def to return part selections by tag
+-- apply rig def to selection
+
+-- def to scale ctrl
+-- def to color control

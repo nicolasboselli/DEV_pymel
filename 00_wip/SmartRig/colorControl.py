@@ -6,7 +6,14 @@ Created on 11 déc. 2013
 @author: nico
 '''
 
-
+"""
+maj:
+    - conform name shape
+    - apply color to all shapes
+    - add color name as property
+    - create def to scale shape
+    
+"""
 
 import pymel.core as pm
 import maya.mel as mm
@@ -30,4 +37,5 @@ def renameShape():
     #print selToName.name("toto")
     pm.rename(selToName, (refName.name() + "Shape"))
     
-
+renameShape()
+colored(17)

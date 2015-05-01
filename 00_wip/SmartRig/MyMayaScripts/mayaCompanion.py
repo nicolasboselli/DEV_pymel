@@ -44,7 +44,7 @@ except Exception as ex:
         return wrapInstance(long(main_window_ptr), QtGui.QWidget)
     om.MGlobal_displayInfo('import 2014')
 
-from MyMayaScripts.UI_myMayaScripts import Ui_Dialog
+from SmartRig.MyMayaScripts.UI_myMayaScripts import Ui_Dialog
 import SmartRig.jointsMisc as jointsDef
 import SmartRig.createHelpers as helpers
 import SmartRig.colorControl as color

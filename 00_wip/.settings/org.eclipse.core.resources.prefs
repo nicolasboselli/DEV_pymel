@@ -1,5 +1,6 @@
 eclipse.preferences.version=1
-encoding//IKFK/AddAttr.py=utf-8
-encoding//MyMayaScripts/mayaCompanion.py=iso-8859-1
+encoding//SmartRig/IKFK/AddAttr.py=utf-8
+encoding//SmartRig/MyMayaScripts/mayaCompanion.py=iso-8859-1
 encoding//SmartRig/colorControl.py=utf-8
 encoding//SmartRig/createHelpers.py=utf-8
+encoding//SmartRig/ikCurve.py=utf-8

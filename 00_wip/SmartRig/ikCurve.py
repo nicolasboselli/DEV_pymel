@@ -12,8 +12,7 @@ Created on 13 dec. 2013
 @author: nico
 '''
 
-def curveInfo(part = 1):
-    sel = pm.ls(sl = True)
+def curveInfo(part = 1, sel = pm.ls(sl = True) ):
 
     if (len(sel)) == 1:
         for s in sel:
