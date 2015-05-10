@@ -10,30 +10,31 @@ hide motion_system
 connect ctrlvis
 edit circle_ctrls size
 place switch_IKFK
-add controller to ctrl set
 rename correctly fk an ik controls
 add follow on ik mid ctrl
 add follow on fk chest
+add follow on ik base ctrl
+
+debug:
+    twist on ik chain
 """
 
 
 
-import cleanPipeline.cleanModules as clean
-from multiprocessing import Condition
-from math import ceil
-reload(clean)
-clean.cleanModules()
+# import cleanPipeline.cleanModules as clean
+# from multiprocessing import Condition
+# from math import ceil
+# reload(clean)
+# clean.cleanModules()
 
 from pprint import pprint
 import pymel.core as pm
 import SmartRig.createHelpers as helpers
-import ctrlShape.ctrlShapes as ctrlShapes
 import SmartRig.IKFK.AddAttr as ikAttr
 import SmartRig.IKFK.SmartRigDef as SRD
 import SmartRig.ikCurve as SRikCurve
 import SmartRig.IKFK.FK_chain as FKChain
 import math
-
 
 
 sel = pm.ls(sl = True)
@@ -59,14 +60,15 @@ rootGrp.rename("IKFK_spine_%s" % rootGrp.nodeName())
 rootGrp.setParent(motionGrp)
 FK_chain[0].setParent(rootGrp)
 
-ikSpineGrp = helpers.insertGroup([IK_chain[0]])[0]
-fkSpineGrp = helpers.insertGroup([FK_chain[0]])[0]
+ikSpineGrp = helpers.insertGroups([IK_chain[0]])[0]
+fkSpineGrp = helpers.insertGroups([FK_chain[0]])[0]
 
 
 ########################################### FK system
 
 fkCtrlsRoot = FKChain.createFKchain(sel = FK_chain, collectHierarchy = False, theSuffix = "_FK_ctrl", rad = 4.5)
-fkCtrlsRoot.setParent(fkSpineGrp)
+for fkRoot in fkCtrlsRoot:
+    fkRoot.setParent(fkSpineGrp)
 
 ######################################### IK System
 # insert joints
@@ -113,7 +115,7 @@ for i,cv in enumerate(cvsList):
     tmpCluster.setParent(clusterGrp)
     clusterList.append(tmpCluster)
     
-    oneCtrl = ctrlShapes.createNurbsSphere(rad = 0.5)
+    oneCtrl = helpers.createNurbsSphere(rad = 0.5)
     ctrlList.append(oneCtrl)
 #     oneCtrl.setParent(ctrlGrp)
     tmpPoint = pm.pointConstraint(tmpCluster, oneCtrl)
@@ -124,18 +126,22 @@ for i,cv in enumerate(cvsList):
 for c in ctrlList:
     c.setParent(ctrlGrp)
 
-ctrlListGrp = helpers.insertGroup(ctrlList)
+ctrlListGrp = helpers.insertGroups(ctrlList)
 
+print "check253"
 # create main ctrls
 # orient up and down ctrls as joint selection
-upCtrl = helpers.createCircle([1,0,0], sel = [sel[0]], radius = 4, suffix= "_IK_ctrl")[0]
-dwCtrl = helpers.createCircle([1,0,0], sel = [sel[len(sel)-1]], radius = 4, suffix= "_IK_ctrl")[0]
+upCtrlGrp, upCtrl = helpers.createOneCircle([1,0,0], sel = sel[0], rad = 4, suf= "_IK_ctrl")
+print "check2531"
+dwCtrlGrp, dwCtrl = helpers.createOneCircle([1,0,0], sel = sel[len(sel)-1], rad = 4, suf= "_IK_ctrl")
 idMid =  int((pm.datatypes.round(float(len(ctrlListGrp))/2)) - 1)
-midCtrl = helpers.createCircle([0,1,0], sel = [ctrlList[idMid]], radius = 4, suffix= "_IK_ctrl")[0]
+midCtrlGrp, midCtrl = helpers.createOneCircle([0,1,0], sel = ctrlList[idMid], rad = 4, suf= "_IK_ctrl")
 
-(upCtrl.getParent()).setParent(ctrlGrp)
-(dwCtrl.getParent()).setParent(ctrlGrp)
-(midCtrl.getParent()).setParent(ctrlGrp)
+print "check254"
+upCtrlGrp.setParent(ctrlGrp)
+dwCtrlGrp.setParent(ctrlGrp)
+midCtrlGrp.setParent(ctrlGrp)
+print "check255"
 
 upLoc = helpers.createOneLoc(parentToWorld = False, s = upCtrl)
 dwLoc = helpers.createOneLoc(parentToWorld = False, s = dwCtrl)
@@ -248,10 +254,12 @@ if tmp:
 
 constrain = pm.parentConstraint(dwCtrl, IK_chain[len(IK_chain)-1], IKfollowJnt)
 
+
 for attr in pm.listAttr(constrain, visible = True, keyable= True):
-            if 'IK' in attr:
+            if 'IKW' in attr:
                 print(attr)
                 pm.connectAttr(dwCtrl.followJoint, '%s.%s' % (constrain,attr))
+                ikFound = True
             elif 'ctrl' in attr:
                 print(attr)
                 pm.connectAttr(dwCtrl.followCtrl, '%s.%s' % (constrain,attr))
@@ -296,4 +304,5 @@ for i in range(0, (len(sel)),1):
             elif 'FK' in attr:
                 print(attr)
                 pm.connectAttr(switchIKFK.fk, '%s.%s' % (constrain,attr))
+
 

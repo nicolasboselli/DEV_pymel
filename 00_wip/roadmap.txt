@@ -1,15 +1,33 @@
 -- Loup relative
+-- skeleton
+	--add pelvis between spine 1 and leg
+	-- add head down before head and jaw
+	-- replace jaw
+	-- exclude spine1 and body from the skin. pelvis instead
+	-- add follow ik for spine1 on ikfk spline
+	
+-- SmartRig
+	-- fkChain: respect hierarchy
 
 -- eyes template
 	-- with or without copy to origin for blendshape
--- reverse foot template for ik
+	
+-- reverse foot template for ik.
 
 -- additive cup, roll, spread for hand
--- how to connect different parts?
+	-- create hand template?
 
--- create helpers: choose shape as parameter
-	--create cube and cross 
-	
+-- how to connect different parts? alias
+
+-- ribbon
+	-- add ribbon deformation system on additive rig
+	-- look in existing joint to re use ribbon deformation system
+
+-- save skin + joint list + joint position
+
+-- ikfk
+	-- add resize member attribute
+ 
 -- def to tag joint
 -- def to return part selections by tag
 -- apply rig def to selection

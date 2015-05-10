@@ -37,5 +37,5 @@ def renameShape():
     #print selToName.name("toto")
     pm.rename(selToName, (refName.name() + "Shape"))
     
-renameShape()
-colored(17)
+# renameShape()
+# colored(17)

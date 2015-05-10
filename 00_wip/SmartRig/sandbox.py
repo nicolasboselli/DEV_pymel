@@ -1,35 +1,30 @@
+import cleanPipeline.cleanModules as clean
+from multiprocessing import Condition
+from math import ceil
+reload(clean)
+clean.cleanModules()
 
 from pprint import pprint
 import pymel.core as pm
+import SmartRig.createHelpers as helpers
+import SmartRig.IKFK.SmartRigDef as SRD
 
-# joints = pm.ls(type = 'joint')
-# for j in joints:
-#     print j.getAttr('radius')
+
+
+sel = pm.ls(sl = True)[0]
+
+defSys = SRD.initDeformSystem()
+motSys = SRD.initMotionSystem()
+
+
+def createOneAlias(sel = None):
+    rootGrp, rootHlp = helpers.createOneHelper( sel = sel, freezeGrp = True, hierarchyParent = "motion_system", constraintFrom = sel, suf= "_alias")
+    childJoints = pm.listRelatives(sel, children = True, type = "joint")
+    if len(childJoints)>0:
+        for j in childJoints:
+            helpers.createOneHelper( sel = j, type = "loc", freezeGrp = True, hierarchyParent = rootHlp, suf = "_alias")
+            
+        
+
     
-# sel = pm.ls(sl = True)[0]
-# shpe = sel.getShape()
-# print(shpe)
-# 
-# pprint(pm.listAttr(shpe))
-# print shpe.getAttr('spansU')
-# print shpe.spansU.get()
-
-
-# sel = pm.ls(sl = True)[0]
-# res = pm.xform(sel, q = True, relative = True, boundingBox = True)
-# print res
-
-# get vertex
-# get local position vertex
-# collect xmax, xmin, ymin, ymax
-# calculate dimension
-# pm.delete(sel.getShape())
-# res = sel.listRelatives(children = True, type = 'transform')
-# print res
-# print pm.nodeType(sel)
-
-# print sel.shapeName()
-
-pm.parent('ribbon_plane_twist_up', 'ribbon_plane_motion_system')
-    
-    
+createOneAlias(sel = sel)

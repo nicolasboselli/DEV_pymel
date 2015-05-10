@@ -3,6 +3,11 @@ Created on 23 avr. 2015
 
 @author: nicolas_2
 '''
+
+"""
+respect hierarchy
+"""
+
 # import cleanPipeline.cleanModules as clean
 # from multiprocessing import Condition
 # reload(clean)
@@ -17,7 +22,6 @@ import maya.OpenMaya as om
 
 
 # sel = pm.ls(sl = True)
-
 def collectAllChild (sel):
     jointList = []
     jointList.append(sel)
@@ -27,8 +31,9 @@ def collectAllChild (sel):
             jointList.append(children[i])
     return jointList
 
+
 def createOneFKChain(jointList = None, radius = 1, theSuffix = "_FK_ctrl"):
-                # create controller
+    # create controller
     fkCtrlsGrp, fkCtrls = helpers.createCircle([1,0,0], sel = jointList, radius = radius, suffix = theSuffix)
     
     # create controller hierachy 
@@ -71,4 +76,4 @@ def createFKchain (sel = None, collectHierarchy = True, rad = 1, theSuffix = "_F
     
     return tmpChild
 
-# createFKchain(sel = pm.ls(sl = True))
+#createFKchain(sel = pm.ls(sl = True))

@@ -41,11 +41,33 @@ def createOneCircle(axis, sel = None, rad = 2, suf = "_ctrl"):
     pm.parent(oneGroup, w = True)
     
     om.MGlobal_displayInfo('circle created: \t%s' % oneCircle.nodeName())   
-    print "check 4"
     return oneGroup,oneCircle
 
-def createOneHelper(type, axis = [0,1,0], sel = None, scale = 1, suf = ""):
+def createOneHelper(type = None, sel = None, axis = [0,1,0], \
+    scale = 1, suf = "", freezeGrp = True, hierarchyParent = None, \
+    constraintTo = False, constraintFrom = False):
+    """
+    param:
+    String type: helper shape type
+    one PyNode sel: selection to create the helper on
+    [float,float,float] axis: vector for the circle creation
+    float scale: size of the helper
+    string suf: optionnal string for the renaming
+    bool freezeGrp: option to create one group above the helper
+    string hierarchyParent: specify where the helper will be parented in the hierarchy
+    bool constraintTo : parent and scale constraint from the selection to the controller
+    bool constraintFrom : parent and scale constraint from the controller to the selection
+    
+    return:
+    Pynode group 
+    PyNode helper
+    """
+    
     oneHelp = None
+    oneGroup = None
+    rootHelp = None
+    
+    # helper creation
     if type == "cube":
         oneHelp = createOneCube(d = scale, sel = sel)
     elif type == "cross":
@@ -56,19 +78,56 @@ def createOneHelper(type, axis = [0,1,0], sel = None, scale = 1, suf = ""):
         pass
     elif type == "square":
         pass
+    elif type == "loc":
+        oneHelp = pm.spaceLocator()
+        pass
+    elif not type:
+        oneHelp = pm.group(empty = True)
     
+    # check helper creation 
     if not oneHelp: 
         om.MGlobal_displayError('type error')   
         return
+    else:
+        rootHelp = oneHelp
     
+    # helper renaming
     if sel: pm.rename(oneHelp, (sel.nodeName() + suf + "_crtl"))
     
-    oneGroup = pm.group(em = True, name = (oneHelp.nodeName() + "_grp" ))
-    oneHelp.setParent(oneGroup)
-    pm.parent(oneGroup, sel, r = True)
-    pm.parent(oneGroup, w = True)
+    # freeze grp helper creation
+    if freezeGrp: 
+        oneGroup = pm.group(em = True, name = (oneHelp.nodeName() + "_grp" ))
+        oneHelp.setParent(oneGroup)
+        pm.parent(oneGroup, sel, r = True)
+        pm.parent(oneGroup, w = True)
+        rootHelp = oneGroup
     
-    om.MGlobal_displayInfo('circle created: \t%s' % oneHelp.nodeName())   
+    # parent the helper in the hierarchy
+    if hierarchyParent:
+        if hierarchyParent == "child":
+            rootHelp.setParent(sel)
+        elif hierarchyParent == "insert":
+            print"check 1"
+            bakParent = sel.getParent()
+            print"check 2"
+            rootHelp.setParent(bakParent)
+            print"check 3"
+            sel.setParent(oneHelp)
+            print"check 4"
+        else:
+            parentNode = pm.PyNode(hierarchyParent)
+            rootHelp.setParent(parentNode)
+    
+    if constraintTo:
+        pm.parentConstraint(oneHelp, sel)
+        pm.scaleConstraint(oneHelp, sel)
+        
+    if constraintFrom:
+        pm.parentConstraint(sel, oneHelp)
+        pm.scaleConstraint(sel, oneHelp)
+        
+        
+    om.MGlobal_displayInfo('helper created: \t%s' % oneHelp.nodeName())   
     return oneGroup,oneHelp
 
 def rootGroup(sel = None):
@@ -91,7 +150,7 @@ def rootGroup(sel = None):
         
     return(rootGrps)
 
-def insertGroup(sel = None):
+def insertGroups(sel = None):
     if not sel:
         sel = pm.ls(sl = True)
     
@@ -191,4 +250,13 @@ def createOneCube(d = 1, name = "cube_ctrl", sel = None):
     
     pm.delete(curv1, curv2, curv3, curv4, curv5, curv6)
     return curveFinal
- 
+
+
+def createOneAlias(sel = None):
+    rootGrp, rootHlp = createOneHelper( sel = sel, freezeGrp = True, hierarchyParent = "motion_system", constraintFrom = sel, suf= "_alias")
+    childJoints = pm.listRelatives(sel, children = True, type = "joint")
+    if len(childJoints)>0:
+        for j in childJoints:
+            createOneHelper( sel = j, type = "loc", freezeGrp = True, hierarchyParent = rootHlp, suf = "_alias")
+            
+      

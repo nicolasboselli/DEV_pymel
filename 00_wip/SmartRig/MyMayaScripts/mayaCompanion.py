@@ -20,6 +20,8 @@ import maya.OpenMaya as om
 import maya.OpenMayaUI as omui
 import pymel.core as pm
 import maya.mel as mm
+import SmartRig.createHelpers as helpers
+import SmartRig.IKFK.FK_chain as FK
 
 try:
     import sip
@@ -50,7 +52,7 @@ import SmartRig.createHelpers as helpers
 import SmartRig.colorControl as color
 import SmartRig.makeRibbon as ribbon
 import SmartRig.ikCurve as ikSpline
-import ctrlShape.ctrlShapes as shapes
+import SmartRig.createHelpers as shapes
 
 class MyCompanion(QtGui.QDialog):
     
@@ -77,6 +79,9 @@ class MyCompanion(QtGui.QDialog):
         self.ui.circleY_pb.clicked.connect(lambda: helpers.createCircle([0,1,0]))
         self.ui.circleZ_pb.clicked.connect(lambda: helpers.createCircle([0,0,1]))
         
+# alias connection
+        self.ui.createAlias_pb.clicked.connect(self.createAlias)
+        
 #         locators connection
         self.ui.loc10_pb.clicked.connect(lambda: helpers.createLoc(1))
         self.ui.loc05_pb.clicked.connect(lambda: helpers.createLoc(0.5))
@@ -84,7 +89,7 @@ class MyCompanion(QtGui.QDialog):
         
 #         parent connection
         self.ui.rootGrp_pb.clicked.connect(helpers.rootGroup)
-        self.ui.insertGrp_pb.clicked.connect(helpers.insertGroup)
+        self.ui.insertGrp_pb.clicked.connect(helpers.insertGroups)
         self.ui.childGrp_pb.clicked.connect(helpers.childGroup)
         
 #         colors assignement
@@ -93,7 +98,7 @@ class MyCompanion(QtGui.QDialog):
         self.ui.blue_pb.clicked.connect(lambda: color.colored(6))
         
 #         controller Shapes
-        self.ui.ctrlCube_pb.clicked.connect(shapes.createCube)
+        self.ui.ctrlCube_pb.clicked.connect(shapes.createOneCube)
         
 #         joints connection
         self.ui.resizeJoint_pb.clicked.connect(self.resizeJoints)
@@ -116,10 +121,23 @@ class MyCompanion(QtGui.QDialog):
         self.ui.ribbon_pb.clicked.connect(ribbon.makeRibbon)
         
 #         ik spline
-        self.ui.arc_pb.clicked.connect(self.createArcPart)        
+        self.ui.arc_pb.clicked.connect(self.createArcPart)   
+        
+#         FK     
+        self.ui.createFK_pb.clicked.connect(self.createFK)
     
-    
-    
+    def createAlias(self):
+        sel = pm.ls(sl = True)
+        for s in sel:
+            helpers.createOneAlias(s)
+        print "alias created"
+        
+    def createFK(self):
+        sel = pm.ls(sl = True)
+        state = self.ui.selectHierarchy_cb.isChecked()
+        FK.createFKchain(sel = sel, collectHierarchy = state)
+        print state
+        
     def testButton(self):
         print('test')
     

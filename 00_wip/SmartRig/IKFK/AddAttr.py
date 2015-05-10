@@ -8,6 +8,7 @@ Created on 8 d�c. 2013
 import pymel.core as pm
 import maya.mel as mm
 
+"""
 def addAttrSwitch():
     # attibute du switch ik
     sel = pm.ls(sl= True)
@@ -32,4 +33,4 @@ def addAttrIK(sel = None):
         for i in range(0,3):
             pm.addAttr( s, longName = newAttrs[i], attributeType = 'double', min = 0 , max = 1, dv = 0 )
             pm.setAttr( (s + "." + newAttrs[i]) , keyable = True )
-            
+"""    
