@@ -1,36 +1,80 @@
--- Loup relative
--- skeleton
-	--add pelvis between spine 1 and leg
-	-- add head down before head and jaw
-	-- replace jaw
-	-- exclude spine1 and body from the skin. pelvis instead
-	-- add follow ik for spine1 on ikfk spline
-	
--- SmartRig
-	-- fkChain: respect hierarchy
+-- Loup character relative
+	-- skeleton
+		--add pelvis between spine 1 and leg
+		-- add head down before head and jaw
+		-- replace jaw
+		-- exclude spine1 and body from the skin. pelvis instead
+		-- add follow ik for spine1 on ikfk spline
 
+	-- body rig
+		-- end reverse foot template
+		-- correct pelvis in ikfkspline template
+		-- make fk_chain template works on hierarchy
+		
+	-- eyes rig
+	-- eyes blendshape: scale pupil
+	-- ribbon
+	-- facial blendshape (expression, labial, eyelid)
+	-- theeth/tongue: additive rig/ blendshape
+	-- facial additional rig: mouth, eyes, eyesbrow
+	
+	-- corrective blendshape
+		-- quentin tools
+	
+	-- skinning
+		-- quentin tools
+	
+	-- test character and animation mixer
+	
+	-- create picker
+========================= Templates
+-- fkChain.py
+	-- respect hierarchy
+	x-- return root to link to deformation joint parent
+
+-- reverseFoot.py
+	-- reverse foot template for ik.
+	-- return root to link to deformation joint parent
+
+-- ribbon.py
+	-- add ribbon deformation system on additive rig
+	-- look in existing joint to re use ribbon deformation system
+	-- transfer skin weight from joint to ribbon
+
+-- ikfk_spline.py
+	-- add pelvis system on ik and fk chain
+	-- add follow on ik mid ctrl
+	-- add follow on fk chest
+	-- add follow on ik base ctrl
+	-- return root to link to deformation joint parent
+
+-- IKFK.py
+	-- add resize member attribute
+	-- add squash
+	x-- add manage vis connection
+	-- return root to link to deformation joint parent
+	
+-- manageCtrls.py:
+	-- def to change scale ctrl
+	-- def to color control
+
+
+-- how to connect different parts? alias
+	-- create alias during rig contruction
+	-- connect to parent joint in deformation system
+	
 -- eyes template
 	-- with or without copy to origin for blendshape
 	
--- reverse foot template for ik.
-
 -- additive cup, roll, spread for hand
 	-- create hand template?
 
--- how to connect different parts? alias
-
--- ribbon
-	-- add ribbon deformation system on additive rig
-	-- look in existing joint to re use ribbon deformation system
-
 -- save skin + joint list + joint position
 
--- ikfk
-	-- add resize member attribute
- 
--- def to tag joint
--- def to return part selections by tag
--- apply rig def to selection
+-- create complete rig from tag
+	-- def to tag joint
+	-- def to return part selections by tag
+	-- apply rig def to selection
 
--- def to scale ctrl
--- def to color control
+
+

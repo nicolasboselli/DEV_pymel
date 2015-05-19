@@ -55,14 +55,97 @@ class ManageCtrls(QtGui.QDialog):
         self.ui.Xminus_pb.clicked.connect(self.moveXminus)
         self.ui.Xplus_pb.clicked.connect(self.moveXplus)
         
-    def moveXplus(self):
-        sel = pm.ls(sl = True)
-        for s in sel:
-            MC.moveShape(s, movX = True, move = 1)
+        self.ui.Yminus_pb.clicked.connect(self.moveYminus)
+        self.ui.Yplus_pb.clicked.connect(self.moveYplus)
+
+        self.ui.Zminus_pb.clicked.connect(self.moveZminus)
+        self.ui.Zplus_pb.clicked.connect(self.moveZplus)
+        
+        
+        self.ui.scaleXYZ_minus_pb.clicked.connect(self.scaleXYZminus)
+        self.ui.scaleXYZ_plus_pb.clicked.connect(self.scaleXYZplus)
+        
+        self.ui.scaleX_minus_pb.clicked.connect(self.scaleXminus)
+        self.ui.scaleX_plus_pb.clicked.connect(self.scaleXplus)
+        
+        self.ui.scaleY_minus_pb.clicked.connect(self.scaleYminus)
+        self.ui.scaleY_plus_pb.clicked.connect(self.scaleYplus)
+        
+        self.ui.scaleZ_minus_pb.clicked.connect(self.scaleZminus)
+        self.ui.scaleZ_plus_pb.clicked.connect(self.scaleZplus)
+        
+        
     def moveXminus(self):
         sel = pm.ls(sl = True)
         for s in sel:
             MC.moveShape(s, movX = True, move = -1)
+            
+    def moveXplus(self):
+        sel = pm.ls(sl = True)
+        for s in sel:
+            MC.moveShape(s, movX = True, move = 1)
+    
+    def moveYminus(self):
+        sel = pm.ls(sl = True)
+        for s in sel:
+            MC.moveShape(s, movY = True, move = -1)
+            
+    def moveYplus(self):
+        sel = pm.ls(sl = True)
+        for s in sel:
+            MC.moveShape(s, movY = True, move = 1)
+
+    def moveZminus(self):
+        sel = pm.ls(sl = True)
+        for s in sel:
+            MC.moveShape(s, movZ = True, move = -1)
+            
+    def moveZplus(self):
+        sel = pm.ls(sl = True)
+        for s in sel:
+            MC.moveShape(s, movZ = True, move = 1)
+    
+    def scaleXYZminus(self):
+        sel = pm.ls(sl = True)
+        for s in sel:
+            MC.scaleShape(s, scale = 0.5)
+            
+    def scaleXYZplus(self):
+        sel = pm.ls(sl = True)
+        for s in sel:
+            MC.scaleShape(s, scale = 2)
+    
+    def scaleXminus(self):
+        sel = pm.ls(sl = True)
+        for s in sel:
+            MC.scaleShape(s, scalX = True, scale = 0.5)
+            
+    def scaleXplus(self):
+        sel = pm.ls(sl = True)
+        for s in sel:
+            MC.scaleShape(s, scalX = True, scale = 2)
+            
+    def scaleYminus(self):
+        sel = pm.ls(sl = True)
+        for s in sel:
+            MC.scaleShape(s, scalY = True, scale = 0.5)
+            
+    def scaleYplus(self):
+        sel = pm.ls(sl = True)
+        for s in sel:
+            MC.scaleShape(s, scalY = True, scale = 2)
+            
+    def scaleZminus(self):
+        sel = pm.ls(sl = True)
+        for s in sel:
+            MC.scaleShape(s, scalZ = True, scale = 0.5)
+            
+    def scaleZplus(self):
+        sel = pm.ls(sl = True)
+        for s in sel:
+            MC.scaleShape(s, scalZ = True, scale = 2)
+    
+
             
         
 ManageCtrlUI = ManageCtrls()

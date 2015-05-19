@@ -62,6 +62,9 @@ def createOneHelper(type = None, sel = None, axis = [0,1,0], \
     Pynode group 
     PyNode helper
     """
+    """
+    bug: freezeGrp go to the world
+    """
     
     oneHelp = None
     oneGroup = None
@@ -75,7 +78,7 @@ def createOneHelper(type = None, sel = None, axis = [0,1,0], \
     elif type == "sphere":
         pass
     elif type == "circle":
-        pass
+        oneHelp = pm.circle( ch = False, o = True, nr = axis, r = scale)[0]
     elif type == "square":
         pass
     elif type == "loc":
@@ -255,8 +258,10 @@ def createOneCube(d = 1, name = "cube_ctrl", sel = None):
 def createOneAlias(sel = None):
     rootGrp, rootHlp = createOneHelper( sel = sel, freezeGrp = True, hierarchyParent = "motion_system", constraintFrom = sel, suf= "_alias")
     childJoints = pm.listRelatives(sel, children = True, type = "joint")
+    childAlias = []
     if len(childJoints)>0:
         for j in childJoints:
-            createOneHelper( sel = j, type = "loc", freezeGrp = True, hierarchyParent = rootHlp, suf = "_alias")
-            
+            oneGrp, oneHlp = createOneHelper( sel = j, type = "loc", freezeGrp = True, hierarchyParent = rootHlp, suf = "_alias")
+            childAlias.append(oneHlp)
+    return childAlias
       

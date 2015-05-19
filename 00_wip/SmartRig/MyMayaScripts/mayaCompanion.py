@@ -8,6 +8,15 @@ Created on 22 May 2014
 '''
 
 #TODO: cleaning module scripts
+"""
+debug:
+    create two controllers on the same joint(delete old system, implement?)
+    create two alias on the same joint(delete old system, implement?)
+    recreate hierarchy with alias:
+        on each alias creation find alias position in hierarchy and place it?
+"""
+
+
 
 # Import PySide classes
 import cleanPipeline.cleanModules as clean
