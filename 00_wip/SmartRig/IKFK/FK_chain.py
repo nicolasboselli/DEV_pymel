@@ -26,13 +26,29 @@ def collectAllChild (sel):
     jointList = []
     jointList.append(sel)
     children = pm.listRelatives(sel, allDescendents = True, type = 'joint')
+    
+    # select only joint with children
     for i in range((len(children)-1),0,-1):
         if  len(children[i].getChildren()) > 0:
             jointList.append(children[i])
     return jointList
 
-
+def createFKChainHierarchy(sel):
+    pass
+    # getChildren = True
+    # while getChildren
+    # for s in parent
+        # create controller on sel
+        # find children
+            # for each children create controller 
+            # parent children controller on parent controller
+                # find parent
+                # find controller parent
+        # if not children = false
+    
+    
 def createOneFKChain(jointList = None, radius = 1, theSuffix = "_FK_ctrl", axis = [1,0,0] ):
+    
     # create controller
     fkCtrlsGrp, fkCtrls = helpers.createCircle(axis=axis, sel = jointList, radius = radius, suffix = theSuffix)
     
@@ -45,6 +61,7 @@ def createOneFKChain(jointList = None, radius = 1, theSuffix = "_FK_ctrl", axis 
         pm.scaleConstraint(fkCtrls[i], jointList[i])
     
     return fkCtrlsGrp, fkCtrls
+    
    
 
 def createFKchain (sel = None, collectHierarchy = True, rad = 1, theSuffix = "_FK_ctrl", axis = [1,0,0], linkChain = False, returnCtrls = False, hideSystem = True):
