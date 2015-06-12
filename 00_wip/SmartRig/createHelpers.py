@@ -43,7 +43,7 @@ def createOneCircle(axis, sel = None, rad = 2, suf = "_ctrl"):
     om.MGlobal_displayInfo('circle created: \t%s' % oneCircle.nodeName())   
     return oneGroup,oneCircle
 
-def createOneHelper(type = None, sel = None, axis = [0,1,0], \
+def createOneHelper(sel = None, type = None, axis = [0,1,0], \
     scale = 1, suf = "", freezeGrp = True, hierarchyParent = None, \
     constraintTo = False, constraintFrom = False):
     """
@@ -80,7 +80,7 @@ def createOneHelper(type = None, sel = None, axis = [0,1,0], \
     elif type == "circle":
         oneHelp = pm.circle( ch = False, o = True, nr = axis, r = scale)[0]
     elif type == "square":
-        pass
+        pass 
     elif type == "loc":
         oneHelp = pm.spaceLocator()
         pass
@@ -97,30 +97,47 @@ def createOneHelper(type = None, sel = None, axis = [0,1,0], \
     # helper renaming
     if sel: pm.rename(oneHelp, (sel.nodeName() + suf + "_crtl"))
     
-    # freeze grp helper creation
-    if freezeGrp: 
-        oneGroup = pm.group(em = True, name = (oneHelp.nodeName() + "_grp" ))
-        oneHelp.setParent(oneGroup)
-        pm.parent(oneGroup, sel, r = True)
-        pm.parent(oneGroup, w = True)
-        rootHelp = oneGroup
+
     
     # parent the helper in the hierarchy
     if hierarchyParent:
         if hierarchyParent == "child":
-            rootHelp.setParent(sel)
+#             rootHelp.setParent(sel)
+            pm.parent(oneHelp, sel, r = True)
+            
         elif hierarchyParent == "insert":
-            print"check 1"
             bakParent = sel.getParent()
-            print"check 2"
-            rootHelp.setParent(bakParent)
-            print"check 3"
-            sel.setParent(oneHelp)
-            print"check 4"
+            pm.parent(oneHelp, sel, r = True)
+            pm.parent(oneHelp, bakParent)
+            pm.parent(sel, oneHelp)
+            
         else:
             parentNode = pm.PyNode(hierarchyParent)
             rootHelp.setParent(parentNode)
+            
+    elif not hierarchyParent:
+        pm.parent(oneHelp, sel, r = True)
+        pm.parent(oneHelp, w = True)
     
+            
+    # freeze grp helper creation
+    if freezeGrp: 
+        oneGroup = pm.group(em = True, name = (oneHelp.nodeName() + "_grp" ))
+        # place frozen grp on helper
+        pm.parent(oneGroup, oneHelp, r = True)
+        # find helper parent
+        rootTmp = oneHelp.getParent()
+        # parent frozen grp to helper's parent
+        pm.parent(oneGroup, rootTmp)
+        # parent helper to frozen grp
+        pm.parent(oneHelp, oneGroup)
+        """
+        pm.parent(oneHelp, oneGroup)
+        pm.parent(oneGroup, sel, r = True)
+        pm.parent(oneGroup, w = True)
+        rootHelp = oneGroup
+        """
+        
     if constraintTo:
         pm.parentConstraint(oneHelp, sel)
         pm.scaleConstraint(oneHelp, sel)
@@ -172,6 +189,8 @@ def insertGroups(sel = None):
         grpList.append(oneGroup)
     
     return grpList
+
+
 
 def childGroup():
     sel = pm.ls(sl = True)
@@ -264,4 +283,12 @@ def createOneAlias(sel = None):
             oneGrp, oneHlp = createOneHelper( sel = j, type = "loc", freezeGrp = True, hierarchyParent = rootHlp, suf = "_alias")
             childAlias.append(oneHlp)
     return childAlias
-      
+
+
+# sel = pm.ls(sl = True)[0]
+# createOneHelper(sel = sel, type = "circle", freezeGrp = True, hierarchyParent = None )
+# createOneHelper(sel = sel, type = "circle", freezeGrp = True, hierarchyParent = "insert" )
+# createOneHelper(sel = sel, freezeGrp = True, hierarchyParent = "insert" )
+
+
+

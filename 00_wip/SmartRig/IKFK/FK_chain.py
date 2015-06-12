@@ -20,35 +20,24 @@ import SmartRig.IKFK.SmartRigDef as SRD
 import maya.mel as mm
 import maya.OpenMaya as om
 
+reload(helpers)
 
 # sel = pm.ls(sl = True)
 def collectAllChild (sel):
     jointList = []
-    jointList.append(sel)
+    for s in sel:
+        jointList.append(s)
+        
     children = pm.listRelatives(sel, allDescendents = True, type = 'joint')
     
     # select only joint with children
     for i in range((len(children)-1),0,-1):
         if  len(children[i].getChildren()) > 0:
             jointList.append(children[i])
+            
     return jointList
 
-def createFKChainHierarchy(sel):
-    pass
-    # getChildren = True
-    # while getChildren
-    # for s in parent
-        # create controller on sel
-        # find children
-            # for each children create controller 
-            # parent children controller on parent controller
-                # find parent
-                # find controller parent
-        # if not children = false
-    
-    
 def createOneFKChain(jointList = None, radius = 1, theSuffix = "_FK_ctrl", axis = [1,0,0] ):
-    
     # create controller
     fkCtrlsGrp, fkCtrls = helpers.createCircle(axis=axis, sel = jointList, radius = radius, suffix = theSuffix)
     
@@ -61,10 +50,41 @@ def createOneFKChain(jointList = None, radius = 1, theSuffix = "_FK_ctrl", axis 
         pm.scaleConstraint(fkCtrls[i], jointList[i])
     
     return fkCtrlsGrp, fkCtrls
-    
-   
 
-def createFKchain (sel = None, collectHierarchy = True, rad = 1, theSuffix = "_FK_ctrl", axis = [1,0,0], linkChain = False, returnCtrls = False, hideSystem = True):
+def createFKChainHierarchy(jointList, radius = 1, theSuffix = "_FK_ctrl", axis = [1,0,0] ):
+#     jointList = pm.ls(sl = True)[0]
+    fkCtrlsGrp = []
+    fkCtrls = []
+
+    # find all descendants
+#     jointList = collectAllChild(jointList)
+    
+    for s in jointList:
+        # find parent selection
+        parentTmp = s.getParent()
+
+        # create ctrl
+        helpRoot, help = helpers.createOneHelper(type = "circle", sel = s, suf = theSuffix, axis = axis, freezeGrp= True, hierarchyParent = None, constraintTo = s)
+        fkCtrlsGrp.append(helpRoot)
+        fkCtrls.append(help)
+        
+        # if parent ctrl: parent root helper to parent ctrl
+        if parentTmp:
+            # find parent ctrl
+            const = pm.listRelatives(parentTmp, type = "parentConstraint")
+            if len(const)>0:
+                parentCtrl = pm.listConnections(const[0].target[0].targetTranslate)
+                pprint(parentCtrl)
+                # attach new ctrl to parent
+                helpRoot.setParent(parentCtrl)
+        
+    
+    return fkCtrlsGrp, fkCtrls
+
+# createFKChainHierarchy(jointList = pm.ls(sl = True)[0])
+
+
+def createFKchain (sel = None, collectHierarchy = True, rad = 1, theSuffix = "_FK_ctrl", axis = [1,0,0], linkChain = False, returnCtrls = False, hideSystem = False):
     
     motionGrp = SRD.initMotionSystem ()
     defGrp = SRD.initDeformSystem ()
@@ -76,15 +96,15 @@ def createFKchain (sel = None, collectHierarchy = True, rad = 1, theSuffix = "_F
     
     fkCtrls = []
     tmpChild = []
+    
     if collectHierarchy:
-        for s in sel:
-            jointList = collectAllChild(s)
-                    # create controller
-            fkCtrlsGrp, fkCtrls = createOneFKChain(jointList = jointList, theSuffix = theSuffix, radius = rad, axis= axis )
-            
-            # parent fk_chain to motion_system
-            fkCtrlsGrp[0].setParent(motionGrp)
-            tmpChild.append(fkCtrlsGrp[0])
+        # create controller
+        jointList = collectAllChild(sel)
+        fkCtrlsGrp, fkCtrls = createFKChainHierarchy(jointList = jointList, theSuffix = theSuffix, radius = rad, axis= axis )
+        
+        # parent fk_chain to motion_system
+        fkCtrlsGrp[0].setParent(motionGrp)
+        tmpChild.append(fkCtrlsGrp[0])
             
     else:
         fkCtrlsGrp, fkCtrls = createOneFKChain(jointList = sel, theSuffix = theSuffix, radius = rad, axis= axis)
@@ -103,7 +123,14 @@ def createFKchain (sel = None, collectHierarchy = True, rad = 1, theSuffix = "_F
     if not returnCtrls:
         return tmpChild
     else:
-        return tmpChild, fkCtrls
-    
+        return tmpChild, fkCtrlsGrp, fkCtrls
 
-# createFKchain(sel = pm.ls(sl = True), linkChain = True)
+
+# sel = pm.ls(sl = True)
+# jointList = collectAllChild(sel)
+# pprint(jointList)
+
+# createFKChainHierarchy(jointList = jointList)
+
+# createFKchain(sel = sel, collectHierarchy = True, linkChain= True)
+

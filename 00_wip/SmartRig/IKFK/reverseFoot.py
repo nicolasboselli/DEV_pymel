@@ -15,6 +15,40 @@ from pymel.core.general import PyNode
 import SmartRig.IKFK.FK_chain as fkChain
 
 reload(fkChain)
+reload(helpers)
+
+def defineFootStructure(sel = None):
+    # test ankle selection
+    if not sel.getAttr("type") == 18 and not sel.getAttr("otherType") == "ankle":
+        om.MGlobal_displayWarning("bad selection")
+        return
+    
+    # collect ankle
+    print sel
+    footDict = {}
+    allJnt = pm.listRelatives(sel, allDescendents = True, type= "joint")
+    allJnt.append(sel)
+    
+    for j in allJnt:
+        if(j.getAttr("type") == 18):
+            print(j.getAttr("otherType"))
+            if (j.getAttr("otherType") == "ankle"):
+                footDict["ankle"] = j
+            elif (j.getAttr("otherType") == "end"):
+                footDict["end"] = j
+            elif (j.getAttr("otherType") == "toes"):
+                footDict["toes"] = j
+            elif (j.getAttr("otherType") == "ball"):
+                footDict["ball"] = j
+            elif (j.getAttr("otherType") == "heel"):
+                footDict["heel"] = j
+                
+    return footDict
+"""
+sel = pm.ls(sl = True)[0]
+footDict = defineFootStructure(sel = sel)
+pprint(footDict)
+"""
 
 def findFeet(sel):
     R_foot = {}
@@ -198,15 +232,107 @@ def createReverseFoot(dico, parentGrp, stretchCtrl):
     
     # make reverse foot system
         # add fk ctrls for rolling
-    revfkRoot = fkChain.createFKchain(sel = [Rev_foot_heel, Rev_foot_end, Rev_foot_toes, Rev_foot_ball], collectHierarchy = False, rad = 3, axis=[0,1,0], hideSystem= False )
+    revfkRoot, revfkCtrlsGrp, revfkCtrls = fkChain.createFKchain(sel = [Rev_foot_heel, Rev_foot_end, Rev_foot_toes, Rev_foot_ball], collectHierarchy = False, rad = 3, axis=[0,1,0], hideSystem= False, returnCtrls= True )
     revfkRoot[0].setParent(oneGrp)
     
         # add fk ctrl on additive toes joint
+    
         
-    # connect roll and angle attribute
+        
+    ########## create roll
+        # connect roll and angle attribute
+            # heel grp connection 
+                # create condition
+    heel_rolling_condition = pm.createNode("condition", name = "heel_rolling_condition")
+    pm.connectAttr(stretchCtrl.roll, heel_rolling_condition.firstTerm)
+    pm.connectAttr(heel_rolling_condition.firstTerm, heel_rolling_condition.colorIfTrueR)
+    heel_rolling_condition.colorIfFalseR.set(0)
+    heel_rolling_condition.operation.set(5)
+    
+                # create multiplydivide "regul"
+    heel_rolling_regul = pm.createNode("multiplyDivide", name = "heel_rolling_regul")
+    pm.connectAttr(heel_rolling_condition.outColorR, heel_rolling_regul.input1X)
+    heel_rolling_regul.input2X.set(-0.2)
+    
+                # create mutiplydivide "angle"
+    heel_rolling_angle = pm.createNode("multiplyDivide", name = "heel_rolling_angle")
+    pm.connectAttr(stretchCtrl.angle, heel_rolling_angle.input1X)
+    pm.connectAttr(heel_rolling_regul.outputX, heel_rolling_angle.input2X)
+    
+                # freeze grp
+    helpGrp, help = helpers.createOneHelper(sel = revfkCtrlsGrp[0],  freezeGrp = False, hierarchyParent = "insert")
+                # connect to group
+    pm.connectAttr(heel_rolling_angle.outputX, revfkCtrlsGrp[0].rotateY)
+    
+            # end connection 
+                # create plus minus
+    end_rolling_minore = pm.createNode("plusMinusAverage", name = "end_rolling_minore")
+    pm.connectAttr(stretchCtrl.roll, end_rolling_minore.input1D[0])
+    end_rolling_minore.input1D[1].set(5)
+    end_rolling_minore.operation.set(2)
+                # create condition
+    end_rolling_condition = pm.createNode("condition", name = "end_rolling_condition")
+    pm.connectAttr(stretchCtrl.roll, end_rolling_condition.firstTerm)
+    pm.connectAttr(end_rolling_minore.output1D, end_rolling_condition.colorIfTrueR)
+    end_rolling_condition.colorIfFalseR.set(0)
+    end_rolling_condition.secondTerm.set(5)
+    end_rolling_condition.operation.set(2)
+    
+                # create multiplydivide "regul"
+    end_rolling_regul = pm.createNode("multiplyDivide", name = "end_rolling_regul")
+    pm.connectAttr(end_rolling_condition.outColorR, end_rolling_regul.input1X)
+    end_rolling_regul.input2X.set(-0.2)
+                
+                # create mutiplydivide "angle"
+    end_rolling_angle = pm.createNode("multiplyDivide", name = "end_rolling_angle")
+    pm.connectAttr(stretchCtrl.angle, end_rolling_angle.input1X)
+    pm.connectAttr(end_rolling_regul.outputX, end_rolling_angle.input2X)
+                # freeze grp
+    helpGrp, help = helpers.createOneHelper(sel = revfkCtrlsGrp[1],  freezeGrp = False, hierarchyParent = "insert")
+                # connect ro group
+    pm.connectAttr(end_rolling_angle.outputX, revfkCtrlsGrp[1].rotateY)
+                
+                
+            # ball connection 
+                # create condition
+    ball_rolling_first_condition = pm.createNode("condition", name = "ball_rolling_first_condition")
+    pm.connectAttr(stretchCtrl.roll, ball_rolling_first_condition.firstTerm)
+    pm.connectAttr(ball_rolling_first_condition.firstTerm, ball_rolling_first_condition.colorIfTrueR)
+    ball_rolling_first_condition.operation.set(2)
+    ball_rolling_first_condition.colorIfFalseR.set(0)
+    
+                # create plus minus
+    ball_rolling_minore = pm.createNode("plusMinusAverage", name = "ball_rolling_minore")
+    ball_rolling_minore.input1D[0].set(10)
+    pm.connectAttr(ball_rolling_first_condition.outColorR, ball_rolling_minore.input1D[1])
+    ball_rolling_minore.operation.set(2)
+    
+                # create condition
+    ball_rolling_second_condition = pm.createNode("condition", name = "ball_rolling_second_condition")
+    pm.connectAttr(ball_rolling_first_condition.outColorR, ball_rolling_second_condition.firstTerm)
+    pm.connectAttr(ball_rolling_minore.output1D, ball_rolling_second_condition.colorIfFalseR)
+    pm.connectAttr(ball_rolling_second_condition.firstTerm, ball_rolling_second_condition.colorIfTrueR)
+    ball_rolling_second_condition.operation.set(4)
+    ball_rolling_second_condition.secondTerm.set(5)
+    
+                # create multiplydivide "regul"
+    ball_rolling_regul = pm.createNode("multiplyDivide", name = "ball_rolling_regul")
+    pm.connectAttr(ball_rolling_second_condition.outColorR, ball_rolling_regul.input1X)
+    ball_rolling_regul.input2X.set(-0.2)
+    print "check 6"
+                # create mutiplydivide "angle"
+    ball_rolling_angle = pm.createNode("multiplyDivide", name = "ball_rolling_angle")
+    pm.connectAttr(stretchCtrl.angle, ball_rolling_angle.input1X)
+    pm.connectAttr(ball_rolling_regul.outputX, ball_rolling_angle.input2X)
+                # freeze grp
+    helpGrp, help = helpers.createOneHelper(sel = revfkCtrlsGrp[2],  freezeGrp = False, hierarchyParent = "insert")
+                # connect ro group
+    print "check 35"
+    pm.connectAttr(ball_rolling_angle.outputX, revfkCtrlsGrp[2].rotateY)
+    print "check 4"
     
     
-    return oneGrp, Rev_foot_ankle_end, revFootDico, revfkRoot[0]
+    return oneGrp, Rev_foot_ankle_end, revFootDico, revfkRoot[0], revfkCtrlsGrp
 
 
 
@@ -217,10 +343,7 @@ def createStretch(dico, parentGrp, rootJoint, ikEndJoint, mirroredJnt = False):
     add pole vector
     add override ctrl
     """
-    print "start stretch"
     kneeJoint = rootJoint.getChildren()
-    print(kneeJoint)
-    print(kneeJoint[0].translateX.get())
     
     stretchGrp = pm.group(empty = True, name = "StretchFoot_grp")
     # create copy
@@ -287,7 +410,9 @@ def createStretch(dico, parentGrp, rootJoint, ikEndJoint, mirroredJnt = False):
     pm.connectAttr(kneeJoint[0].translateX, legSizeDef.input1D[0])
     pm.connectAttr(ikEndJoint.translateX, legSizeDef.input1D[1])
     
+    legSizeDefInv = None
     # if mirrored joint add multiply to negative size
+    
     if mirroredJnt:
         legSizeDefInv = pm.createNode("multiplyDivide", name = "default_Leg_size_invert")
         legSizeDefInv.input2X.set(-1)
@@ -298,11 +423,21 @@ def createStretch(dico, parentGrp, rootJoint, ikEndJoint, mirroredJnt = False):
     resizeCond = pm.createNode("condition", name = "resize_leg_condition" )
     
     pm.connectAttr(distNode.distance, resizeCond.firstTerm )
-    pm.connectAttr(legSizeDefInv.outputX, resizeCond.secondTerm )
+    # if mirroredJoint
+    if mirroredJnt:
+        pm.connectAttr(legSizeDefInv.outputX, resizeCond.secondTerm )
+    else:
+        pm.connectAttr(legSizeDef.output1D, resizeCond.secondTerm )
+        
     resizeCond.operation.set(5)
     
     pm.connectAttr(distNode.distance, resizeCond.colorIfTrueR )
-    pm.connectAttr(legSizeDefInv.outputX, resizeCond.colorIfFalseR )
+    # if mirroredJoint
+    if mirroredJnt:
+        pm.connectAttr(legSizeDefInv.outputX, resizeCond.colorIfFalseR )
+    else:
+        pm.connectAttr(legSizeDef.output1D, resizeCond.colorIfFalseR )
+        
     
     # calculate additive leg_size (plusminus node)
         # connect size condition to node
@@ -313,21 +448,133 @@ def createStretch(dico, parentGrp, rootJoint, ikEndJoint, mirroredJnt = False):
     # connect ik ctrl size to node
         # connect size addition to ik_end_joint translateX
     pm.connectAttr(addSizeCond.output1D, StretchEnd.translateX )
-        
+    
+
         ########## stretch system
     # create stretch_ratio_node (multiply divide/ divide mode)
+    stretch_ratio_node = pm.createNode("multiplyDivide", name = "stretch_ratio_node")
+    stretch_ratio_node.operation.set(2)
         # connect current_leg_size to stretch_ratio_node input1X
+    pm.connectAttr(distNode.distance, stretch_ratio_node.input1X)
+    
         # connect leg_default_size or leg_default_size_invert to stretch_ratio_node input2X
+    if mirroredJnt:
+        pm.connectAttr(legSizeDefInv.outputX, stretch_ratio_node.input2X)
+    else:
+        pm.connectAttr(legSizeDef.output1D, stretch_ratio_node.input2X)
+    
     # create plusminus node to calculate stretch additive
+    stretch_add = pm.createNode("plusMinusAverage", name = "stretch_additive")
+    pm.connectAttr(stretch_ratio_node.outputX, stretch_add.input1D[0])
+    stretch_add.input1D[1].set(1)
+    stretch_add.operation.set(2)
+    
     # create multiplydivide node to mutiply stretch additive with stretch attribute
+    stretch_multiply = pm.createNode("multiplyDivide", name = "stretch_multiply")
+    pm.connectAttr(stretch_add.output1D, stretch_multiply.input1X)
+    pm.connectAttr(ctrl.stretch, stretch_multiply.input2X)
+    
     # create plusminus node to calculate final stretch
+    stretch_final = pm.createNode("plusMinusAverage", name = "stretch_final")
+    stretch_final.input1D[0].set(1)
+    pm.connectAttr(stretch_multiply.outputX, stretch_final.input1D[1])
+    
     # create condition to apply stretch only when stretch > 1
+    stretch_condition = pm.createNode("condition", name = "stretch_condition")
+    pm.connectAttr(stretch_final.output1D, stretch_condition.firstTerm)
+    pm.connectAttr(stretch_condition.firstTerm, stretch_condition.colorIfTrueR)
+    stretch_condition.secondTerm.set(1)
+    stretch_condition.operation.set(3)
+    
+    # connect to joint
+    pm.connectAttr(stretch_condition.outColorR, StretchRoot.scaleX )
+    
     
     print "end stretch"
-    return stretchGrp, StretchRoot, StretchEnd, ctrl
+    return stretchGrp, StretchRoot, StretchEnd, ctrl, distNode, legSizeDefInv
+    
+
+def createRevFoot(sel = None, mirroredJnt = False):
+    """
+    maj: anchor
+    """
+    # create hierarchy
+    motionGrp = SRD.initMotionSystem ()
+    defGrp = SRD.initDeformSystem ()
+    
+    # test the selection
+    # return foot dictionnary from ankle selection
+    foot_dict = defineFootStructure(sel)
+    # find ik root, ik switch, 
+    if foot_dict.has_key("ankle"): switchCtrl, ikRoot, ikCtrl, jointTarget, ikEndJoint, fkEndJoint = initChain(foot_dict)
+    
+    # create reverse foot grp
+    revFootGrp = None
+    tmpName = sel.nodeName() + "_reverse_foot_grp"
+    res = pm.ls(tmpName)
+    if len(res) == 0: 
+        revFootGrp = pm.group(empty = True, name = tmpName)
+        revFootGrp.setParent(motionGrp)
+    else:
+        revFootGrp = res[0]
+    
+    ## create fk foot chain
+    fkFootChain, fkFootDico, fkRoot = createFKFoot(foot_dict, revFootGrp )
+    
+    ## create ik stretch chain
+    stretchGrp, StretchRoot, StretchEnd, StretchCtrl, distNode, legSizeDef = createStretch(foot_dict,revFootGrp, ikRoot, mirroredJnt= mirroredJnt, ikEndJoint = ikEndJoint )
+    
+    ## create reverse foot chain
+    revFootStart, revFootEnd, revFootDico, revRootCtrl, revfkCtrlsGrp  = createReverseFoot(foot_dict, revFootGrp, StretchCtrl)
+    
+    
+    
+    ### parent fk foot system to fk leg system(no alias)
+        # parent fk foot start(grp) to joint or ctrl? joint
+    pm.parentConstraint(fkEndJoint, fkRoot)
+    pm.scaleConstraint(fkEndJoint, fkRoot)
+    
+    # parent reverse foot system to ik strech system(no alias)
+        # parent reverse foot root joint on ik stretch
+    pm.pointConstraint(StretchEnd, revFootStart)
+    pm.orientConstraint(StretchCtrl, revFootStart)
+    # pm.parentConstraint(StretchCtrl, revRootCtrl)
+    
+    # parent ik leg system to reverse foot system(ctrl to ankle joint)
+    pm.pointConstraint(revFootEnd, ikCtrl.getParent())
+        # lock autostrech and followctrl
+    
+    
+    
+    ### parent foot deformation system to fk and ik feet
+    for attr in ["end", "ball", "heel", "toes"]:
+        parentConst = pm.parentConstraint(fkFootDico[attr], revFootDico[attr], foot_dict[attr])
+        targetsList = pm.parentConstraint(parentConst, query = True, weightAliasList  = True)
+        # connect parents constraints to ikfkSwitch
+        for t in targetsList:
+            if "FK" in t.name():
+                print(t)
+                pm.connectAttr(switchCtrl.fk, t, f = True)
+            elif "Rev" in t.name():
+                print(t)
+                pm.connectAttr(switchCtrl.ik, t, f = True)
+           
+        scaleConst = pm.scaleConstraint(fkFootDico[attr], revFootDico[attr], foot_dict[attr])
+        scaleTargetsList = pm.scaleConstraint(scaleConst, query = True, weightAliasList  = True)
+        # connect parents constraints to ikfkSwitch
+        for s in scaleTargetsList:
+            if "FK" in s.name():
+    #             print(t)
+                pm.connectAttr(switchCtrl.fk, s, f = True)
+            elif "Rev" in s.name():
+    #             print(t)
+                pm.connectAttr(switchCtrl.ik, s, f = True)
+    
+    # manage visibility
     
 
 ############################################## MAIN ############################ 
+
 """
 maj:
  -- def to find potential reverse foot in scene
@@ -335,92 +582,6 @@ maj:
 """
 
 
-# sel = pm.ls(sl = True)
-sel = pm.ls(pm.PyNode("body_jnt"))
-
-# create hierarchy
-motionGrp = SRD.initMotionSystem ()
-defGrp = SRD.initDeformSystem ()
-
-# find foot joint
-R_foot_dict, L_foot_dict = findFeet(sel)
-
-revFootGrp = None
-
-# create reverse foot grp
-res = pm.ls('reverse_foot_grp')
-if len(res) == 0: 
-    revFootGrp = pm.group(empty = True, name = "reverse_foot_grp")
-    revFootGrp.setParent(motionGrp)
-else:
-    revFootGrp = res[0]
-
-pprint (R_foot_dict)
-pprint (L_foot_dict)
-
-switchCtrl = None
-ikRoot = None
-ikCtrl = None
-joinTarget = []
-ikEndJoint = None
-fkEndJoint = None
-
-# find 
-# find ik root, ik switch, 
-if L_foot_dict.has_key("ankle"): switchCtrl, ikRoot, ikCtrl, jointTarget, ikEndJoint, fkEndJoint = initChain(L_foot_dict)
-
-## create fk foot chain
-fkFootChain, fkFootDico, fkRoot = createFKFoot(L_foot_dict, revFootGrp )
-
-## create ik stretch chain
-stretchGrp, StretchRoot, StretchEnd, StretchCtrl = createStretch(L_foot_dict,revFootGrp, ikRoot, mirroredJnt= True, ikEndJoint = ikEndJoint )
-
-## create reverse foot chain
-revFootStart, revFootEnd, revFootDico, revRootCtrl  = createReverseFoot(L_foot_dict, revFootGrp, StretchCtrl)
-
-# parent fk foot system to fk leg system(no alias)
-    # parent fk foot start(grp) to joint or ctrl? joint
-pm.parentConstraint(fkEndJoint, fkRoot)
-pm.scaleConstraint(fkEndJoint, fkRoot)
-
-# parent reverse foot system to ik strech system(no alias)
-    # parent reverse foot root joint on ik stretch
-pm.pointConstraint(StretchEnd, revFootStart)
-pm.orientConstraint(StretchCtrl, revFootStart)
-# pm.parentConstraint(StretchCtrl, revRootCtrl)
-
-# parent ik leg system to reverse foot system(ctrl to ankle joint)
-pm.pointConstraint(revFootEnd, ikCtrl.getParent())
-    # lock autostrech and followctrl
-
-
-
-# parent foot deformation system to fk and ik feet
-pprint(fkFootDico)
-pprint(L_foot_dict)
-pprint(revFootDico)
-
-for attr in ["end", "ball", "heel", "toes"]:
-    parentConst = pm.parentConstraint(fkFootDico[attr], revFootDico[attr], L_foot_dict[attr])
-    targetsList = pm.parentConstraint(parentConst, query = True, weightAliasList  = True)
-    # connect parents constraints to ikfkSwitch
-    for t in targetsList:
-        if "FK" in t.name():
-            print(t)
-            pm.connectAttr(switchCtrl.fk, t, f = True)
-        elif "Rev" in t.name():
-            print(t)
-            pm.connectAttr(switchCtrl.ik, t, f = True)
-       
-    scaleConst = pm.scaleConstraint(fkFootDico[attr], revFootDico[attr], L_foot_dict[attr])
-    scaleTargetsList = pm.scaleConstraint(scaleConst, query = True, weightAliasList  = True)
-    # connect parents constraints to ikfkSwitch
-    for s in scaleTargetsList:
-        if "FK" in s.name():
-#             print(t)
-            pm.connectAttr(switchCtrl.fk, s, f = True)
-        elif "Rev" in s.name():
-#             print(t)
-            pm.connectAttr(switchCtrl.ik, s, f = True)
-
-# manage visibility
+sel = pm.ls(sl = True)[0]
+# sel = pm.ls(pm.PyNode("body_jnt"))
+createRevFoot(sel = sel, mirroredJnt= False)

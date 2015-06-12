@@ -57,11 +57,12 @@ except Exception as ex:
 
 from SmartRig.MyMayaScripts.UI_myMayaScripts import Ui_Dialog
 import SmartRig.jointsMisc as jointsDef
-import SmartRig.createHelpers as helpers
 import SmartRig.colorControl as color
 import SmartRig.makeRibbon as ribbon
-import SmartRig.ikCurve as ikSpline
 import SmartRig.createHelpers as shapes
+
+import SmartRig.IKFK as ikfk
+
 
 class MyCompanion(QtGui.QDialog):
     
@@ -134,6 +135,15 @@ class MyCompanion(QtGui.QDialog):
         
 #         FK     
         self.ui.createFK_pb.clicked.connect(self.createFK)
+        
+#         IKFK members
+        self.ui.ikfk_pb.clicked.connect(self.createIKFK)
+        
+#         create reverse foot
+        self.ui.revFoot_pb.clicked.connect(self.createRevFoot)
+        
+#         IKFK spline
+        self.ui.revFoot_pb.clicked.connect(self.createIKFKspline)
     
     def createAlias(self):
         sel = pm.ls(sl = True)
@@ -143,16 +153,25 @@ class MyCompanion(QtGui.QDialog):
         
     def createFK(self):
         sel = pm.ls(sl = True)
-        state = self.ui.selectHierarchy_cb.isChecked()
-        FK.createFKchain(sel = sel, collectHierarchy = state)
-        print state
+        hierarchyState = self.ui.selectHierarchy_cb.isChecked()
+        anchorState = self.ui.FKanchor_cb.isChecked()
+        FK.createFKchain(sel = sel, collectHierarchy = hierarchyState, linkChain = anchorState )
         
+    def createIKFK(self):
+        sel = pm.ls(sl = True)
+        
+        
+    def createRevFoot(self):
+        sel = pm.ls(sl = True)
+        
+    def createIKFKspline(self):
+        sel = pm.ls(sl = True)
+    
     def testButton(self):
         print('test')
     
     def createArcPart(self):
-        parts = self.ui.part_sb.value()
-        ikSpline.curveInfo(parts)
+        pass
         
     def resizeJoints(self):
         print 'resize powa!'

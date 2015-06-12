@@ -11,11 +11,12 @@ Created on 23 nov. 2014
 """
 maj:
     - reorganize motion_system with ik and fk
+    - anchor root
     
     x- constraint joint hand wriste to ik
     - add resize on ik
     - add squash on ik
-    - connect ctrls vis
+    x- connect ctrls vis
     - hide ikfk motion_system
     x- make pole vector ctrl a cube
     x- make switch ctrl a cross
@@ -23,8 +24,8 @@ maj:
     - change controllers Color
 
 bug:
-    on ik follow orient joint creation, put joint orient to zero to avoid flip
-    on mirrored joint joint size are negative, add a multiply to avoid issue
+    -- on ik follow orient joint creation, put joint orient to zero to avoid flip
+    x -- on mirrored joint joint size are negative, add a multiply to avoid issue
 """
 
 import cleanPipeline.cleanModules as clean
@@ -42,21 +43,14 @@ import SmartRig.IKFK.FK_chain as FKdef
 import maya.mel as mm
 import maya.OpenMaya as om
 
-
-
-
-
-
-def createIKFK (sel):
-    pass
-
-
-def createIK(sel = None, resizeAttr = True, squashAttr = True, hideSystem = True):
+def createIK(sel = None, resizeAttr = True, squashAttr = True, hideSystem = False, tmpGrp = None, mirroredJoint = False, ikRoot = None):
     """
     maj: 
-        -- invert pole vector translate z on mirrored joint
+        x-- invert pole vector translate z on mirrored joint
         -- make useable on selection with more or les then three objects
+        -- add anchor
     """
+    
     # check selection
     if not sel:
         return
@@ -71,8 +65,11 @@ def createIK(sel = None, resizeAttr = True, squashAttr = True, hideSystem = True
     poleVectorLoc = pm.spaceLocator()
     pm.rename(poleVectorLoc, 'poleVectorLoc')
     
-    pm.parent(poleVectorLoc, sel[1])
-    poleVectorLoc.translate.set(0,0, 1)
+    zVal = 1
+    if not mirroredJoint: zVal = -1
+    
+    pm.parent(poleVectorLoc, sel[1], r = True)
+    poleVectorLoc.translate.set(0,0, zVal)
     poleVectorLoc.rotate.set([0, 0, 0])
     pm.parent(poleVectorLoc.name(), world=True)
     
@@ -84,17 +81,17 @@ def createIK(sel = None, resizeAttr = True, squashAttr = True, hideSystem = True
     
     # constrain pole vector
     pm.poleVectorConstraint(poleVectorLoc, ikHandle, weight=1)
-    PVctrlGrp, PVctrl = helpers.createOneHelper(type = "cube", sel = poleVectorLoc, scale = 0.5)
+    PVctrlGrp, PVctrl = helpers.createOneHelper(type = "cube", sel = poleVectorLoc, scale = 0.5, freezeGrp= True, hierarchyParent = "insert")
     ctrlsList.append(PVctrl)
-    
-    poleVectorLoc.setParent(PVctrl)
+
+#     poleVectorLoc.setParent(PVctrl)
     PVctrlGrp.setParent(tmpGrp) 
     
     # rotate du locator a zero
     # poleVectorLoc.rotate.set([0, 0, 0])
     
     # add ikhandle controller
-    ikCtrlGrp, ikCtrl = helpers.createOneCircle(axis = [1, 0, 0], sel=sel[len(sel)-1], suf = "_IK_ctrl")
+    ikCtrlGrp, ikCtrl = helpers.createOneCircle(axis = [1, 0, 0], sel=sel[-1], suf = "_IK_ctrl")
     ctrlsList.append(ikCtrl)
     
     pm.pointConstraint(ikCtrl, ikHandle)
@@ -127,6 +124,8 @@ def createIK(sel = None, resizeAttr = True, squashAttr = True, hideSystem = True
     followJoint.setParent(ikOrientLoc)
     followJoint.rotate.set(0,0,0)
     followJoint.translate.set(0,0,0)
+    
+#     clean followJoint orient
     
     for attr in pm.listAttr(constrain, visible = True, keyable= True):
                 if 'IKW' in attr:
@@ -171,9 +170,9 @@ def createIK(sel = None, resizeAttr = True, squashAttr = True, hideSystem = True
     pm.rename(stretchRatio_div, 'stretchRatio_div')
     
     #     multiplydivide
-    #             connect sum to multiply
+    #         connect sum to multiply
     pm.connectAttr(fixedSize_sumNode.output1D, stretchRatio_div.input2X)
-    #             connect distance to divide input1x
+    #         connect distance to divide input1x
     pm.connectAttr(distShape.distance, stretchRatio_div.input1X)
     pm.setAttr(stretchRatio_div.operation, 2)
     
@@ -214,12 +213,12 @@ def createIK(sel = None, resizeAttr = True, squashAttr = True, hideSystem = True
     
     ####################################################################################### add resize on ik
     if resizeAttr:
-        pm.addAttr(ikCtrl, ln="lockElbow" , at='double', min=0, max=1, dv = 0)
+        pm.addAttr(ikCtrl, ln= "lockElbow" , at='double', min=0, max=1, dv = 0)
         pm.setAttr(ikCtrl.lockElbow , keyable=True)
     
     ####################################################################################### add squash on ik
     if squashAttr:
-        pm.addAttr(ikCtrl, ln="squash" , at='double', min=0, max=1, dv = 0)
+        pm.addAttr(ikCtrl, ln= "squash" , at='double', min=0, max=1, dv = 0)
         pm.setAttr(ikCtrl.squash , keyable=True)
     
     #################################################### System Vis
@@ -232,132 +231,135 @@ def createIK(sel = None, resizeAttr = True, squashAttr = True, hideSystem = True
     
     return followJoint, ctrlsList
 
-########################################################################## BASE CREATION
 
-# get joint radius
-sel = pm.ls(sl=True)
-radDef = sel[0].radius.get()
-
-# create hierarchy
-motionGrp = SRD.initMotionSystem ()
-defGrp = SRD.initDeformSystem ()
-
-# duplicate selection FK 
-fkChain = pm.duplicate(sel, renameChildren=True, parentOnly=True)
-for jnt in fkChain:
-    pm.rename(jnt, jnt.name() + "_FK")
-    jnt.radius.set(radDef * 1.2)
-
-# duplicate selection IK
-ikChain = pm.duplicate(sel, renameChildren=True, parentOnly=True)
-for jnt in ikChain:
-    pm.rename(jnt, jnt.name() + "_IK")
-    jnt.radius.set(radDef * 1.4)
-
-# jtRoot = helpers.rootGroup([sel[0]])[0]
-fkRoot = helpers.rootGroup([fkChain[0]])[0]
-ikRoot = helpers.rootGroup(sel=[ikChain[0]])[0]
-
-# IKFK grp creation
-tmpGrp = pm.group(em=True)
-pm.rename(tmpGrp, '%s_IKFK_grp' % sel[0])
-tmpGrp.setParent(motionGrp)
-
-ikRoot.setParent(tmpGrp)
-
-fkRoot.setParent(tmpGrp)
-
-
-################################################################################ create FK
-# add FK crtl
-
-fkroot, fkCtrls = FKdef.createFKchain(sel = fkChain, collectHierarchy = False, rad = 2.5, returnCtrls = True)
-fkroot[0].setParent(fkRoot)
-
-############################################################################# create ik
-followJoint, ikCtrls = createIK( sel = ikChain, resizeAttr= False, squashAttr= False )
-
-####################################################################################### switch IKFK
-# create ctrl with switch ikfk
-switchIKFKgrp, switchIKFK = helpers.createOneHelper(type= "cross", sel = sel[0], scale = 0.5, suf = "_switchIKFK")
-
-pm.addAttr(switchIKFK, ln="_______" , attributeType="enum", enumName="CTRLS:")
-pm.addAttr(switchIKFK, ln="fk" , at='double', min=0, max=1)
-pm.addAttr(switchIKFK, ln="ik" , at='double', min=0, max=1)
-pm.addAttr(switchIKFK, ln="fkVis" , at='bool', dv = True)
-pm.addAttr(switchIKFK, ln="ikVis" , at='bool', dv = True)
-pm.addAttr(switchIKFK, ln="autoVis" , at='bool')
-
-pm.setAttr(switchIKFK._______ , keyable=True, lock=True)
-pm.setAttr(switchIKFK.fk, keyable=True)
-pm.setAttr(switchIKFK.ik, keyable=True)
-pm.setAttr(switchIKFK.fkVis, channelBox=True)
-pm.setAttr(switchIKFK.ikVis, channelBox=True)
-pm.setAttr(switchIKFK.autoVis, channelBox=True)
-
-
-subNode = pm.createNode('plusMinusAverage')
-subNode.setAttr("input1D[0]", 1)
-subNode.setAttr('operation', 2)
-
-pm.connectAttr(switchIKFK.fk, '%s.input1D[1]' % subNode.nodeName(), f=True)
-pm.connectAttr(subNode.output1D, '%s.ik' % switchIKFK.nodeName(), f=True)
-
-# add parent constraints on sel
-for i in range(0, (len(sel)),1):
-    constrain = None
-    if not (i == (len(sel)-1)): constrain = pm.parentConstraint(fkChain[i], ikChain[i], sel[i])
-    else: constrain = pm.parentConstraint(fkChain[i], followJoint, sel[i])
+def createIKFK (sel = None, resizeAttr = True, squashAttr = True, hideSystem = False, tmpGrp = None, mirroredJoint = False):
+    ########################################################################## BASE CREATION
     
-    for attr in pm.listAttr(constrain, visible=True, keyable=True):
-        if 'IK' in attr:
-            pm.connectAttr(switchIKFK.ik, '%s.%s' % (constrain, attr))
-        elif 'FK' in attr:
-            pm.connectAttr(switchIKFK.fk, '%s.%s' % (constrain, attr))
-
-# place switch on skeleton
-"""
-add two group upper cross to orient it
-"""
-switchIKFKgrp.setParent(sel[0])
-switchIKFKgrpgrpList = helpers.insertGroups([switchIKFKgrp])
-switchIKFKgrp.tz.set(3)
-pm.pointConstraint(sel[0], switchIKFKgrpgrpList[0], maintainOffset  = False)
-switchIKFKgrpgrpList[0].setParent(tmpGrp)
-
-om.MGlobal_displayInfo("IKFK_done")
-
-# visibility attribute
-    # conditions
-    # if autovis true
-        # ik vis = ik value
-        # fk vis = fk value
-    # else
-        # ik vis = ik vis
-        # fk vis = fk vis
-fkVisCond = pm.createNode("condition", name = "fkVisCondition")
-ikVisCond = pm.createNode("condition", name = "ikVisCondition")
-
-fkVisCond.firstTerm.set(1)
-ikVisCond.firstTerm.set(1)
-
-pm.connectAttr(switchIKFK.autoVis, fkVisCond.secondTerm )
-pm.connectAttr(switchIKFK.fk, fkVisCond.colorIfTrueR )
-pm.connectAttr(switchIKFK.fkVis, fkVisCond.colorIfFalseR )
-
-pm.connectAttr(switchIKFK.autoVis, ikVisCond.secondTerm )
-pm.connectAttr(switchIKFK.ik, ikVisCond.colorIfTrueR )
-pm.connectAttr(switchIKFK.ikVis, ikVisCond.colorIfFalseR )
-    # connections
-for ctrl in ikCtrls:
-    shpesList = pm.listRelatives(ctrl, shapes = True)
-    for shp in shpesList:
-        pm.connectAttr(ikVisCond.outColorR, shp.visibility)
-
-for ctrl in fkCtrls:
-    shpesList = pm.listRelatives(ctrl, shapes = True)
-    for shp in shpesList:
-        pm.connectAttr(fkVisCond.outColorR, shp.visibility)
+    # get joint radius
+    radDef = sel[0].radius.get()
+    
+    # create hierarchy
+    motionGrp = SRD.initMotionSystem ()
+    defGrp = SRD.initDeformSystem ()
+    
+    # duplicate selection FK 
+    fkChain = pm.duplicate(sel, renameChildren=True, parentOnly=True)
+    for jnt in fkChain:
+        pm.rename(jnt, jnt.name() + "_FK")
+        jnt.radius.set(radDef * 1.2)
+    
+    # duplicate selection IK
+    ikChain = pm.duplicate(sel, renameChildren=True, parentOnly=True)
+    for jnt in ikChain:
+        pm.rename(jnt, jnt.name() + "_IK")
+        jnt.radius.set(radDef * 1.4)
+    
+    # jtRoot = helpers.rootGroup([sel[0]])[0]
+    fkRoot = helpers.rootGroup([fkChain[0]])[0]
+    ikRoot = helpers.rootGroup(sel=[ikChain[0]])[0]
+    
+    # IKFK grp creation
+    tmpGrp = pm.group(em=True)
+    pm.rename(tmpGrp, '%s_IKFK_grp' % sel[0])
+    tmpGrp.setParent(motionGrp)
+    
+    ikRoot.setParent(tmpGrp)
+    
+    fkRoot.setParent(tmpGrp)
+    
+    ################################################################################ create FK
+    # add FK crtl
+    
+    fkroot, fkCtrlsGrp, fkCtrls = FKdef.createFKchain(sel = fkChain, collectHierarchy = False, rad = 2.5, returnCtrls = True)
+    fkroot[0].setParent(fkRoot)
+    
+    ############################################################################# create ik
+    followJoint, ikCtrls = createIK(sel = ikChain, resizeAttr= False, squashAttr= False, tmpGrp= tmpGrp, ikRoot= ikRoot)
+    
+    ####################################################################################### switch IKFK
+    # create ctrl with switch ikfk
+    switchIKFKgrp, switchIKFK = helpers.createOneHelper(type= "cross", sel = sel[0], scale = 0.5, suf = "_switchIKFK")
+    
+    pm.addAttr(switchIKFK, ln="_______" , attributeType="enum", enumName="CTRLS:")
+    pm.addAttr(switchIKFK, ln="fk" , at='double', min=0, max=1)
+    pm.addAttr(switchIKFK, ln="ik" , at='double', min=0, max=1)
+    pm.addAttr(switchIKFK, ln="fkVis" , at='bool', dv = True)
+    pm.addAttr(switchIKFK, ln="ikVis" , at='bool', dv = True)
+    pm.addAttr(switchIKFK, ln="autoVis" , at='bool')
+    
+    pm.setAttr(switchIKFK._______ , keyable=True, lock=True)
+    pm.setAttr(switchIKFK.fk, keyable=True)
+    pm.setAttr(switchIKFK.ik, keyable=True)
+    pm.setAttr(switchIKFK.fkVis, channelBox=True)
+    pm.setAttr(switchIKFK.ikVis, channelBox=True)
+    pm.setAttr(switchIKFK.autoVis, channelBox=True)
+    
+    subNode = pm.createNode('plusMinusAverage')
+    subNode.setAttr("input1D[0]", 1)
+    subNode.setAttr('operation', 2)
+    
+    pm.connectAttr(switchIKFK.fk, '%s.input1D[1]' % subNode.nodeName(), f=True)
+    pm.connectAttr(subNode.output1D, '%s.ik' % switchIKFK.nodeName(), f=True)
+    
+    # add parent constraints on sel
+    for i in range(0, (len(sel)),1):
+        constrain = None
+        if not (i == (len(sel)-1)): constrain = pm.parentConstraint(fkChain[i], ikChain[i], sel[i])
+        else: constrain = pm.parentConstraint(fkChain[i], followJoint, sel[i])
         
-# parent root motion system to parent joint deformation system
+        for attr in pm.listAttr(constrain, visible=True, keyable=True):
+            if 'IK' in attr:
+                pm.connectAttr(switchIKFK.ik, '%s.%s' % (constrain, attr))
+            elif 'FK' in attr:
+                pm.connectAttr(switchIKFK.fk, '%s.%s' % (constrain, attr))
     
+    # place switch on skeleton
+    """
+    add two group upper cross to orient it
+    """
+    switchIKFKgrp.setParent(sel[0])
+    switchIKFKgrpgrpList = helpers.insertGroups([switchIKFKgrp])
+    switchIKFKgrp.tz.set(3)
+    pm.pointConstraint(sel[0], switchIKFKgrpgrpList[0], maintainOffset  = False)
+    switchIKFKgrpgrpList[0].setParent(tmpGrp)
+    
+    om.MGlobal_displayInfo("IKFK_done")
+    
+    # visibility attribute
+        # conditions
+        # if autovis true
+            # ik vis = ik value
+            # fk vis = fk value
+        # else
+            # ik vis = ik vis
+            # fk vis = fk vis
+    
+    fkVisCond = pm.createNode("condition", name = "fkVisCondition")
+    ikVisCond = pm.createNode("condition", name = "ikVisCondition")
+    
+    fkVisCond.firstTerm.set(1)
+    ikVisCond.firstTerm.set(1)
+    
+    pm.connectAttr(switchIKFK.autoVis, fkVisCond.secondTerm )
+    pm.connectAttr(switchIKFK.fk, fkVisCond.colorIfTrueR )
+    pm.connectAttr(switchIKFK.fkVis, fkVisCond.colorIfFalseR )
+    
+    pm.connectAttr(switchIKFK.autoVis, ikVisCond.secondTerm )
+    pm.connectAttr(switchIKFK.ik, ikVisCond.colorIfTrueR )
+    pm.connectAttr(switchIKFK.ikVis, ikVisCond.colorIfFalseR )
+        # connections
+    for ctrl in ikCtrls:
+        shpesList = pm.listRelatives(ctrl, shapes = True)
+        for shp in shpesList:
+            pm.connectAttr(ikVisCond.outColorR, shp.visibility)
+    
+    for ctrl in fkCtrls:
+        shpesList = pm.listRelatives(ctrl, shapes = True)
+        for shp in shpesList:
+            pm.connectAttr(fkVisCond.outColorR, shp.visibility)
+            
+    # parent root motion system to parent joint deformation system
+
+
+################################ MAIN
+sel = pm.ls(sl=True)

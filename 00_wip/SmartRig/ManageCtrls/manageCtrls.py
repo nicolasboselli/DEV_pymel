@@ -8,6 +8,13 @@ Created on 6 mai 2015
 import cleanPipeline.cleanModules as clean
 clean.cleanModules()
 
+"""
+maj: 
+-- keep selection after action
+-- add scale parameters
+"""
+
+
 import sys
 
 
@@ -79,71 +86,85 @@ class ManageCtrls(QtGui.QDialog):
         sel = pm.ls(sl = True)
         for s in sel:
             MC.moveShape(s, movX = True, move = -1)
+        pm.select(sel)
             
     def moveXplus(self):
         sel = pm.ls(sl = True)
         for s in sel:
             MC.moveShape(s, movX = True, move = 1)
+        pm.select(sel)
     
     def moveYminus(self):
         sel = pm.ls(sl = True)
         for s in sel:
             MC.moveShape(s, movY = True, move = -1)
+        pm.select(sel)
             
     def moveYplus(self):
         sel = pm.ls(sl = True)
         for s in sel:
             MC.moveShape(s, movY = True, move = 1)
+        pm.select(sel)
 
     def moveZminus(self):
         sel = pm.ls(sl = True)
         for s in sel:
             MC.moveShape(s, movZ = True, move = -1)
+        pm.select(sel)
             
     def moveZplus(self):
         sel = pm.ls(sl = True)
         for s in sel:
             MC.moveShape(s, movZ = True, move = 1)
+        pm.select(sel)
     
     def scaleXYZminus(self):
         sel = pm.ls(sl = True)
         for s in sel:
             MC.scaleShape(s, scale = 0.5)
+        pm.select(sel)
             
     def scaleXYZplus(self):
         sel = pm.ls(sl = True)
         for s in sel:
             MC.scaleShape(s, scale = 2)
+        pm.select(sel)
     
     def scaleXminus(self):
         sel = pm.ls(sl = True)
         for s in sel:
             MC.scaleShape(s, scalX = True, scale = 0.5)
+        pm.select(sel)
             
     def scaleXplus(self):
         sel = pm.ls(sl = True)
         for s in sel:
             MC.scaleShape(s, scalX = True, scale = 2)
+        pm.select(sel)
             
     def scaleYminus(self):
         sel = pm.ls(sl = True)
         for s in sel:
             MC.scaleShape(s, scalY = True, scale = 0.5)
+        pm.select(sel)
             
     def scaleYplus(self):
         sel = pm.ls(sl = True)
         for s in sel:
             MC.scaleShape(s, scalY = True, scale = 2)
+        pm.select(sel)
             
     def scaleZminus(self):
         sel = pm.ls(sl = True)
         for s in sel:
             MC.scaleShape(s, scalZ = True, scale = 0.5)
+        pm.select(sel)
             
     def scaleZplus(self):
         sel = pm.ls(sl = True)
         for s in sel:
             MC.scaleShape(s, scalZ = True, scale = 2)
+        pm.select(sel)
     
 
             

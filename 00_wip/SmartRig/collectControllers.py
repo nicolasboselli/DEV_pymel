@@ -6,7 +6,6 @@ Created on 28 avr. 2015
 from pprint import pprint
 import pymel.core as pm
 import SmartRig.createHelpers as helpers
-import SmartRig.IKFK.AddAttr as ikAttr
 import SmartRig.IKFK.SmartRigDef as SRD
 
 motSys = None

@@ -39,22 +39,26 @@ from math import ceil
 from pprint import pprint
 import pymel.core as pm
 import SmartRig.createHelpers as helpers
-import SmartRig.IKFK.AddAttr as ikAttr
 import SmartRig.IKFK.SmartRigDef as SRD
-import SmartRig.ikCurve as SRikCurve
 import SmartRig.IKFK.FK_chain as FKChain
 import math
 
+import SmartRig.ManageCtrls.manageCtrls_def as manageCtrl
 
-def createIKspine():
+def createIKspline(IK_chain = None, ikSpineGrp = None):
     """
     maj:
-     -- add pelvis control
+     x-- add pelvis control
      -- add follow on mid ctrl
      
-    debug: orint mid ctrl in the same orientation then other controllers
+    debug: 
+     -- orient ik mid ctrl in the same orientation then other controllers
+     
     """
+    
     # insert joints
+#     global IKjointList, dwCtrl,upCtrl
+    
     IKjointList = []
     jointIt = 3
     for jnt in IK_chain:
@@ -151,12 +155,12 @@ def createIKspine():
     
     # make stretch editable
     pm.addAttr(dwCtrl, longName  = "stretch", attributeType  = "double", min = 0, max = 1, dv = 0) 
-    pm.addAttr(dwCtrl, longName  = "squash", attributeType  = "double", min = 0, max = 1, dv = 0)
+#     pm.addAttr(dwCtrl, longName  = "squash", attributeType  = "double", min = 0, max = 1, dv = 0)
     pm.addAttr(dwCtrl, longName  = "followJoint", attributeType  = "double", min = 0, max = 1, dv = 1)
     pm.addAttr(dwCtrl, longName  = "followCtrl", attributeType  = "double", min = 0, max = 1, dv = 0)
     
     pm.setAttr(dwCtrl.stretch, keyable = True)
-    pm.setAttr(dwCtrl.squash, keyable = True)
+#     pm.setAttr(dwCtrl.squash, keyable = True)
     pm.setAttr(dwCtrl.followJoint, keyable = True)
     pm.setAttr(dwCtrl.followCtrl, keyable = True)
     
@@ -207,7 +211,7 @@ def createIKspine():
     
     
     ## follow control on neck
-    lastJoint = IKjointList[len(IKjointList)-1]
+    lastJoint = IKjointList[-1]
     IKfollowJnt = pm.duplicate(lastJoint, name = (lastJoint.nodeName() + "_follow"))[0]
     IKfollowJnt.setAttr("scaleX", 1)
     IKfollowJnt.setParent(ikSpineGrp)
@@ -224,115 +228,295 @@ def createIKspine():
     
     for attr in pm.listAttr(constrain, visible = True, keyable= True):
                 if 'IKW' in attr:
-                    print(attr)
+#                     print(attr)
                     pm.connectAttr(dwCtrl.followJoint, '%s.%s' % (constrain,attr))
                     ikFound = True
                 elif 'ctrl' in attr:
-                    print(attr)
+#                     print(attr)
                     pm.connectAttr(dwCtrl.followCtrl, '%s.%s' % (constrain,attr))
                     
+    
+    ##### ik pelvis
     # follow control on pelvis
-        # dupplicate first joint as pelvis joint
-        # make control on pelvis joint
-        # create follow pelvis joint
-        # parent follow_pelvis_joint to additionnal pelvis system and base ikchain
+        # duplicate first joint as follow_pelvis_joint
+    pelvisIKjoint = pm.duplicate(IKjointList[0], parentOnly = True, name = (IKjointList[0].nodeName() + "_pelvis_follow_joint"))[0]
+    pelvisIKjoint.jointOrient.set([0,0,0])
+    
+        # duplicate down ctrl as pelvis ctrl
+    pelvisIKctrlList = pm.duplicate(upCtrl, name = (upCtrl.nodeName() + "_pelvis"))
+    pelvisIKctrl = pelvisIKctrlList[0]
+    toDel = pm.listRelatives(pelvisIKctrl, children = True, type = "transform")
+    pm.delete(toDel)
+    
+
+    
+    manageCtrl.scaleShape(sel = pelvisIKctrl, scalX = True, scalY = True, scalZ = True, scale = 0.9)
+    
+        # parent pelvis ctrl under down ctrl
+    pm.parent(pelvisIKctrl, upCtrl)
+    helpers.createOneHelper(sel = pelvisIKctrl, freezeGrp = False, hierarchyParent = "insert")
+    
+        # add loc on  IKjointList[0]
+    IKpelvisJointLocGrp, IKpelvisJointLoc = helpers.createOneHelper(type = "loc", sel = IKjointList[0], freezeGrp = False, hierarchyParent = "child")
+        # add loc on  pelvis ctrl
+    IKpelvisCtrlLocGrp, IKpelvisCtrlLoc = helpers.createOneHelper(type = "loc", sel = pelvisIKctrl, freezeGrp = False, hierarchyParent = "child")
+        
+        # parent constraint follow_pelvis_joint to locs
+    IKpelvisConstraint = pm.parentConstraint(IKpelvisJointLoc, IKpelvisCtrlLoc, pelvisIKjoint)
+    
         # add attributes on base controller
-        # control follow with contol on base main ik control
+    pm.addAttr(upCtrl, ln =  "_______" , attributeType  = "enum", enumName = "CTRLS:")
+    pm.addAttr(upCtrl, ln =  "followJoint" , at  = 'double', min = 0, max = 1, dv = 0)
+    pm.addAttr(upCtrl, ln =  "followCtrl" , at  = 'double', min = 0, max = 1)
+    
+    pm.setAttr(upCtrl._______ , keyable = True, lock = True)
+    pm.setAttr(upCtrl.followJoint, keyable = True)
+    pm.setAttr(upCtrl.followCtrl, keyable = True)
+    
+    pelvisSubFollowNode = pm.createNode('plusMinusAverage', name = "pelvis_follow_mode_compense")
+    pelvisSubFollowNode.setAttr("input1D[0]", 1)
+    pelvisSubFollowNode.setAttr('operation', 2)
+    pm.connectAttr(upCtrl.followJoint, pelvisSubFollowNode.input1D[1], f = True)
+    pm.connectAttr(pelvisSubFollowNode.output1D, upCtrl.followCtrl, f = True)
+    
+        # connect attributes to constraint parent
+    contraintList = pm.parentConstraint(IKpelvisConstraint, query = True, targetList = True )
+    # pprint(contraintList)
+    
+    weightAliasList = pm.parentConstraint(IKpelvisConstraint, query = True, weightAliasList  = True )
+    # pprint(weightAliasList)
+    
+    
+    # pprint(IKpelvisJointLoc)
+    
+    for i,c in enumerate(contraintList):
+        if c == IKpelvisJointLoc:
+            pm.connectAttr(upCtrl.followJoint, weightAliasList[i] )
+        elif c == IKpelvisCtrlLoc:
+            pm.connectAttr(upCtrl.followCtrl, weightAliasList[i] )
+        
+        ## constraint deformation system to follow ik
         
     
     # return good array of ik joint to parent on
                     
-    return   IKfollowJnt        
+    return IKfollowJnt, pelvisIKjoint
+
+def createIKFKspine(sel = None):
+    """
+    maj: add follow on chest
+    """
+#     global fkCtrls, FK_chain
+    
+    rad = sel[0].radius.get()
+    
+    # create hierarchy
+    motionGrp = SRD.initMotionSystem ()
+    defGrp = SRD.initDeformSystem ()
+    
+    #create working copy
+    IK_chain = pm.duplicate(sel, parentOnly = True, renameChildren = True)
+    for jnt in IK_chain:
+        pm.rename(jnt, jnt.name() + "_IK")
+        jnt.radius.set(rad*1.4)
+    
+    FK_chain = pm.duplicate(sel, parentOnly = True, renameChildren = True)
+    for jnt in FK_chain:
+        pm.rename(jnt, jnt.name() + "_FK")
+        jnt.radius.set(rad*1.4)
+    
+    rootGrp = helpers.rootGroup([IK_chain[0]])[0]
+    rootGrp.rename("IKFK_spine_%s" % rootGrp.nodeName())
+    rootGrp.setParent(motionGrp)
+    FK_chain[0].setParent(rootGrp)
+    
+    ikSpineGrp = helpers.insertGroups([IK_chain[0]])[0]
+    fkSpineGrp = helpers.insertGroups([FK_chain[0]])[0]
+    
+    
+    ########################################### FK system
+    """
+    maj:
+    -- freeze second fk control
+    """
+    fkCtrlsRoot, fkCtrlsGrp, fkCtrls = FKChain.createFKchain(sel = FK_chain, collectHierarchy = False, theSuffix = "_FK_ctrl", rad = 4.5, hideSystem= False, returnCtrls= True)
+    for fkRoot in fkCtrlsRoot: fkRoot.setParent(fkSpineGrp)
+    # add follow on chest
+    
+    ##### add pelvis control
+    # duplicate first fk control as new base control
+    newBaseFKctrlList = pm.duplicate(fkCtrls[0])
+    newBaseFKctrl = newBaseFKctrlList[0]
+    toDel = pm.listRelatives(newBaseFKctrl, children = True, type = "transform")
+    pm.delete(toDel)
+    
+        # freeze copy
+    helpers.createOneHelper(sel = newBaseFKctrl, freezeGrp= False, hierarchyParent= "insert")
+        # scale copy
+    manageCtrl.scaleShape(sel = newBaseFKctrl, scalX = True, scalY = True, scalZ = True, scale = 1.1)
+    
+    # rename fkCtrl[0] as pelvis control
+    pm.rename(fkCtrls[0], (fkCtrls[0].nodeName() + "_pelvis"))
+    # parent fkCtrl[0] under new base control
+    pm.parent(fkCtrls[0], newBaseFKctrl)
+    # parent fkCtrl[1] under new base control
+    pm.parent(fkCtrls[1], newBaseFKctrl)
+    
+    
+    ######################################### IK System
+    IKfollowJnt, IKpelvisFollowJoint = createIKspline(IK_chain= IK_chain, ikSpineGrp = ikSpineGrp)
+    
+    
+    ############################################  Assembly
+    
+    # constrain deformation system to motion system
+    switchIKFKgrp, switchIKFK = helpers.createOneHelper(type= "cross", sel = sel[0], scale = 0.5, suf = "_switchIKFK_spine")
+    
+    # place switch on skeleton
+    switchIKFKgrp.setParent(sel[0])
+    switchIKFKgrpgrpList = helpers.insertGroups([switchIKFKgrp])
+    switchIKFKgrp.tz.set(3)
+    pm.pointConstraint(sel[0], switchIKFKgrpgrpList[0], maintainOffset  = False)
+    switchIKFKgrpgrpList[0].setParent(rootGrp)
+    
+    # create switch attributes
+    pm.addAttr(switchIKFK, ln =  "_______" , attributeType  = "enum", enumName = "CTRLS:")
+    pm.addAttr(switchIKFK, ln =  "fk" , at  = 'double', min = 0, max = 1, dv = 1)
+    pm.addAttr(switchIKFK, ln =  "ik" , at  = 'double', min = 0, max = 1)
+    pm.addAttr(switchIKFK, ln =  "fkVis" , at  = 'bool')
+    pm.addAttr(switchIKFK, ln =  "ikVis" , at  = 'bool')
+    pm.addAttr(switchIKFK, ln =  "autoVis" , at  = 'bool')
+    
+    pm.setAttr(switchIKFK._______ , keyable = True, lock = True)
+    pm.setAttr(switchIKFK.fk, keyable = True)
+    pm.setAttr(switchIKFK.ik, keyable = True)
+    pm.setAttr(switchIKFK.fkVis, channelBox = True)
+    pm.setAttr(switchIKFK.ikVis, channelBox = True)
+    pm.setAttr(switchIKFK.autoVis, channelBox = True)
+    
+    subNode = pm.createNode('plusMinusAverage', name = "ikfk_compense")
+    subNode.setAttr("input1D[0]", 1)
+    subNode.setAttr('operation', 2)
+    
+    pm.connectAttr(switchIKFK.fk, subNode.input1D[1], f = True)
+    pm.connectAttr(subNode.output1D, switchIKFK.ik, f = True)
+    
+    # constraint deformation system to motion system
+    for i in range(0, (len(sel)),1):
+        constrain = None
+        
+        if  (i == (len(sel)-1)): constrain = pm.parentConstraint(FK_chain[i], IKfollowJnt, sel[i])
+        elif i == 0: constrain = pm.parentConstraint(FK_chain[i], IKpelvisFollowJoint, sel[i])
+        else: constrain = pm.parentConstraint(FK_chain[i], IK_chain[i], sel[i])
+        
+#         if not (i == (len(sel)-1)): constrain = pm.parentConstraint(FK_chain[i], IK_chain[i], sel[i])
+#         else: constrain = pm.parentConstraint(FK_chain[i], IKfollowJnt, sel[i])
+    
+        if constrain:
+            for attr in pm.listAttr(constrain, visible = True, keyable= True):
+                if 'IK' in attr:
+#                     print(attr)
+                    pm.connectAttr(switchIKFK.ik, '%s.%s' % (constrain,attr))
+                elif 'FK' in attr:
+#                     print(attr)
+                    pm.connectAttr(switchIKFK.fk, '%s.%s' % (constrain,attr))
+    
+    # manage visibility
 
 
-############################################################# MAIN
+#### main
+IKjointList = None
+dwCtrl = None
+upCtrl = None
+fkCtrls = None
+FK_chain = None
 
 sel = pm.ls(sl = True)
-rad = sel[0].radius.get()
+createIKFKspine(sel = sel)
 
-# create hierarchy
-motionGrp = SRD.initMotionSystem ()
-defGrp = SRD.initDeformSystem ()
+"""
+##### ik pelvis
+# follow control on pelvis
+    # duplicate first joint as follow_pelvis_joint
+pelvisIKjoint = pm.duplicate(IKjointList[0], parentOnly = True, name = (IKjointList[0].nodeName() + "_pelvis_follow_joint"))[0]
+pelvisIKjoint.jointOrient.set([0,0,0])
 
-#create working copy
-IK_chain = pm.duplicate(sel, parentOnly = True, renameChildren = True)
-for jnt in IK_chain:
-    pm.rename(jnt, jnt.name() + "_IK")
-    jnt.radius.set(rad*1.4)
+    # duplicate down ctrl as pelvis ctrl
+pelvisIKctrlList = pm.duplicate(upCtrl, name = (upCtrl.nodeName() + "_pelvis"))
+pelvisIKctrl = pelvisIKctrlList[0]
+toDel = pm.listRelatives(pelvisIKctrl, children = True, type = "transform")
+pm.delete(toDel)
 
-FK_chain = pm.duplicate(sel, parentOnly = True, renameChildren = True)
-for jnt in FK_chain:
-    pm.rename(jnt, jnt.name() + "_FK")
-    jnt.radius.set(rad*1.4)
+import SmartRig.ManageCtrls.manageCtrls_def as manageCtrl
 
-rootGrp = helpers.rootGroup([IK_chain[0]])[0]
-rootGrp.rename("IKFK_spine_%s" % rootGrp.nodeName())
-rootGrp.setParent(motionGrp)
-FK_chain[0].setParent(rootGrp)
+manageCtrl.scaleShape(sel = pelvisIKctrl, scalX = True, scalY = True, scalZ = True, scale = 0.9)
 
-ikSpineGrp = helpers.insertGroups([IK_chain[0]])[0]
-fkSpineGrp = helpers.insertGroups([FK_chain[0]])[0]
+    # parent pelvis ctrl under down ctrl
+pm.parent(pelvisIKctrl, upCtrl)
+helpers.createOneHelper(sel = pelvisIKctrl, freezeGrp = False, hierarchyParent = "insert")
 
+    # add loc on  IKjointList[0]
+IKpelvisJointLocGrp, IKpelvisJointLoc = helpers.createOneHelper(type = "loc", sel = IKjointList[0], freezeGrp = False, hierarchyParent = "child")
+    # add loc on  pelvis ctrl
+IKpelvisCtrlLocGrp, IKpelvisCtrlLoc = helpers.createOneHelper(type = "loc", sel = pelvisIKctrl, freezeGrp = False, hierarchyParent = "child")
+    
+    # parent constraint follow_pelvis_joint to locs
+IKpelvisConstraint = pm.parentConstraint(IKpelvisJointLoc, IKpelvisCtrlLoc, pelvisIKjoint)
 
-########################################### FK system
+    # add attributes on base controller
+pm.addAttr(upCtrl, ln =  "_______" , attributeType  = "enum", enumName = "CTRLS:")
+pm.addAttr(upCtrl, ln =  "followJoint" , at  = 'double', min = 0, max = 1, dv = 0)
+pm.addAttr(upCtrl, ln =  "followCtrl" , at  = 'double', min = 0, max = 1)
 
-fkCtrlsRoot = FKChain.createFKchain(sel = FK_chain, collectHierarchy = False, theSuffix = "_FK_ctrl", rad = 4.5, hideSystem= False)
-for fkRoot in fkCtrlsRoot: fkRoot.setParent(fkSpineGrp)
-# add follow on chest
-# add pelvis control
+pm.setAttr(upCtrl._______ , keyable = True, lock = True)
+pm.setAttr(upCtrl.followJoint, keyable = True)
+pm.setAttr(upCtrl.followCtrl, keyable = True)
 
+pelvisSubFollowNode = pm.createNode('plusMinusAverage', name = "pelvis_follow_mode_compense")
+pelvisSubFollowNode.setAttr("input1D[0]", 1)
+pelvisSubFollowNode.setAttr('operation', 2)
+pm.connectAttr(upCtrl.followJoint, pelvisSubFollowNode.input1D[1], f = True)
+pm.connectAttr(pelvisSubFollowNode.output1D, upCtrl.followCtrl, f = True)
 
-######################################### IK System
-IKfollowJnt = createIKspine()
+    # connect attributes to constraint parent
+contraintList = pm.parentConstraint(IKpelvisConstraint, query = True, targetList = True )
+# pprint(contraintList)
 
+weightAliasList = pm.parentConstraint(IKpelvisConstraint, query = True, weightAliasList  = True )
+# pprint(weightAliasList)
 
-############################################  Assembly
+coList = pm.listConnections(IKpelvisConstraint.target, connections = False)
+# pprint(coList)
 
-# constrain deformation system to motion system
-switchIKFKgrp, switchIKFK = helpers.createOneHelper(type= "cross", sel = sel[0], scale = 0.5, suf = "_switchIKFK_spine")
+# pprint(IKpelvisJointLoc)
 
-# place switch on skeleton
-switchIKFKgrp.setParent(sel[0])
-switchIKFKgrpgrpList = helpers.insertGroups([switchIKFKgrp])
-switchIKFKgrp.tz.set(3)
-pm.pointConstraint(sel[0], switchIKFKgrpgrpList[0], maintainOffset  = False)
-switchIKFKgrpgrpList[0].setParent(rootGrp)
+for i,c in enumerate(contraintList):
+    if c == IKpelvisJointLoc:
+        pm.connectAttr(upCtrl.followJoint, weightAliasList[i] )
+    elif c == IKpelvisCtrlLoc:
+        pm.connectAttr(upCtrl.followCtrl, weightAliasList[i] )
+    
+    ## constraint deformation system to follow ik
 
-# create switch attributes
-pm.addAttr(switchIKFK, ln =  "_______" , attributeType  = "enum", enumName = "CTRLS:")
-pm.addAttr(switchIKFK, ln =  "fk" , at  = 'double', min = 0, max = 1, dv = 1)
-pm.addAttr(switchIKFK, ln =  "ik" , at  = 'double', min = 0, max = 1)
-pm.addAttr(switchIKFK, ln =  "fkVis" , at  = 'bool')
-pm.addAttr(switchIKFK, ln =  "ikVis" , at  = 'bool')
-pm.addAttr(switchIKFK, ln =  "autoVis" , at  = 'bool')
+#### fk pelvis
+pm.select(fkCtrls[0])
+# duplicate first fk control as new base control
+newBaseFKctrlList = pm.duplicate(fkCtrls[0])
+newBaseFKctrl = newBaseFKctrlList[0]
+toDel = pm.listRelatives(newBaseFKctrl, children = True, type = "transform")
+pm.delete(toDel)
 
-pm.setAttr(switchIKFK._______ , keyable = True, lock = True)
-pm.setAttr(switchIKFK.fk, keyable = True)
-pm.setAttr(switchIKFK.ik, keyable = True)
-pm.setAttr(switchIKFK.fkVis, channelBox = True)
-pm.setAttr(switchIKFK.ikVis, channelBox = True)
-pm.setAttr(switchIKFK.autoVis, channelBox = True)
+    # freeze copy
+helpers.createOneHelper(sel = newBaseFKctrl, freezeGrp= False, hierarchyParent= "insert")
+    # scale copy
+manageCtrl.scaleShape(sel = newBaseFKctrl, scalX = True, scalY = True, scalZ = True, scale = 1.1)
 
-subNode = pm.createNode('plusMinusAverage', name = "ikfk_compense")
-subNode.setAttr("input1D[0]", 1)
-subNode.setAttr('operation', 2)
+# rename fkCtrl[0] as pelvis control
+pm.rename(fkCtrls[0], (fkCtrls[0].nodeName() + "_pelvis"))
+# parent fkCtrl[0] under new base control
+pm.parent(fkCtrls[0], newBaseFKctrl)
+# parent fkCtrl[1] under new base control
+pm.parent(fkCtrls[1], newBaseFKctrl)
 
-pm.connectAttr(switchIKFK.fk, subNode.input1D[1], f = True)
-pm.connectAttr(subNode.output1D, switchIKFK.ik, f = True)
+"""
 
-# constraint deformation system to motion system
-for i in range(0, (len(sel)),1):
-    constrain = None
-    if not (i == (len(sel)-1)): constrain = pm.parentConstraint(FK_chain[i], IK_chain[i], sel[i])
-    else: constrain = pm.parentConstraint(FK_chain[i], IKfollowJnt, sel[i])
-
-    if constrain:
-        for attr in pm.listAttr(constrain, visible = True, keyable= True):
-            if 'IK' in attr:
-                print(attr)
-                pm.connectAttr(switchIKFK.ik, '%s.%s' % (constrain,attr))
-            elif 'FK' in attr:
-                print(attr)
-                pm.connectAttr(switchIKFK.fk, '%s.%s' % (constrain,attr))
-
-# manage visibility

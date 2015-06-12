@@ -24,13 +24,20 @@
 	-- skinning
 		-- quentin tools
 	
-	-- test character and animation mixer
+	-- test character set
+		-- to use in animation mixer
+		-- to export/import anim
+		-- to retarget animation
+		-- to create selection set
+		
+	-- test human ik interface to create picker
 	
 	-- create picker
 ========================= Templates
 -- fkChain.py
-	-- respect hierarchy
+	x-- respect hierarchy
 	x-- return root to link to deformation joint parent
+	-- create ctrl on end controls
 
 -- reverseFoot.py
 	-- reverse foot template for ik.
@@ -65,11 +72,14 @@
 	
 -- eyes template
 	-- with or without copy to origin for blendshape
+	-- create aim with follow
 	
 -- additive cup, roll, spread for hand
 	-- create hand template?
 
 -- save skin + joint list + joint position
+
+-- create loc/move/fly/body template creation
 
 -- create complete rig from tag
 	-- def to tag joint
